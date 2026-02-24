@@ -6,7 +6,14 @@
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [
     "https://www.thomann.de/*",
-    "https://thomann.de/*"
+    "https://thomann.de/*",
+    "https://www.thomann.fr/*",
+    "https://thomann.fr/*",
+    "https://www.thomann.com/*",
+    "https://thomann.com/*",
+    "https://www.thomann.es/*",
+    "https://thomann.es/*",
+    "https://*.thomann.*/*"
   ],
   "action": {
     "default_popup": "popup.html",

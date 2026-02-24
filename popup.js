@@ -18,15 +18,37 @@ function setupEventListeners() {
 }
 
 function extractArticleId(input) {
+    input = input.trim();
+    
     // Check if it's a URL
-    if (input.includes('thomann')) {
-        const match = input.match(/\/(\d+)\.html/);
+    if (input.match(/^https?:\/\//i) || input.includes('thomann')) {
+        // Normalize the URL
+        if (!input.match(/^https?:\/\//i)) {
+            input = 'https://' + input;
+        }
+        
+        // Try to extract numeric article ID from various Thomann URL formats
+        let match = input.match(/[/_]product[_-]?(\d+)/i);
         if (match) return match[1];
+        
+        match = input.match(/\/(\d+)\.html?/i);
+        if (match) return match[1];
+        
+        match = input.match(/\/p(\d+)\//i);
+        if (match) return match[1];
+        
+        match = input.match(/(\d{5,})/);
+        if (match) return match[1];
+        
+        // If no numeric ID found, use the full URL as identifier
+        return input;
     }
-    // Otherwise assume it's an ID
+    
+    // Assume it's an article ID (just digits)
     if (/^\d+$/.test(input)) {
         return input;
     }
+    
     return null;
 }
 
@@ -44,11 +66,15 @@ function addItem() {
         return;
     }
     
+    // Determine if it's a URL or numeric ID
+    const isUrl = articleId.match(/^https?:\/\//i);
+    const url = isUrl ? articleId : `https://www.thomann.de/${articleId}.html`;
+    
     chrome.storage.local.get('items', (result) => {
         const items = result.items || [];
         
-        // Check if item already exists
-        if (items.some(item => item.id === articleId)) {
+        // Check if item already exists (by URL or ID)
+        if (items.some(item => item.id === articleId || item.url === url)) {
             alert('This item is already tracked');
             return;
         }
@@ -56,7 +82,7 @@ function addItem() {
         // Add new item
         items.push({
             id: articleId,
-            url: `https://www.thomann.de/${articleId}.html`,
+            url: url,
             addedAt: new Date().toISOString()
         });
         
@@ -164,17 +190,10 @@ function checkStockB(articleId, url) {
 }
 
 function checkStockBInHtml(html) {
-    // Check for Stock B text patterns on Thomann page
-    // This looks for specific indicators that Stock B is available
-    const stockBPatterns = [
-        /Stock\s*B/i,
-        /Lagerbestand\s*B/i,
-        /Verfügbar.*B/i,
-        /stock-b/i,
-        /available.*stock-b/i
-    ];
+    // Check if there's a div with class "discounts-and-addons" containing a link with "b_stock" in the URL
+    const hasBStock = /<div[^>]*class="[^"]*discounts-and-addons[^"]*"[^>]*>.*?href="[^"]*b_stock[^"]*\.htm/is.test(html);
     
-    return stockBPatterns.some(pattern => pattern.test(html));
+    return hasBStock;
 }
 
 function updateResult(articleId, isAvailable, error) {

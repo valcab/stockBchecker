@@ -34,13 +34,8 @@ async function handleStockCheck(articleId, url) {
 }
 
 function checkStockBInHtml(html) {
-    const stockBPatterns = [
-        /Stock\s*B/i,
-        /Lagerbestand\s*B/i,
-        /Verfügbar.*B/i,
-        /stock-b/i,
-        /available.*stock-b/i
-    ];
+    // Check if there's a div with class "discounts-and-addons" containing a link with "b_stock" in the URL
+    const hasBStock = /<div[^>]*class="[^"]*discounts-and-addons[^"]*"[^>]*>.*?href="[^"]*b_stock[^"]*\.htm/is.test(html);
     
-    return stockBPatterns.some(pattern => pattern.test(html));
+    return hasBStock;
 }
