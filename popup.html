@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Thomann Stock B Checker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Stock B Checker</h1>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <input type="text" id="articleInput" placeholder="Enter Thomann article URL or ID" />
+                <button id="addButton">Add Item</button>
+            </div>
+            <button id="checkAllButton" class="primary-button">Check All Items</button>
+        </div>
+
+        <div class="items-section">
+            <h2>Tracked Items</h2>
+            <div id="itemsList" class="items-list">
+                <p class="empty-state">No items tracked yet</p>
+            </div>
+        </div>
+
+        <div class="results-section">
+            <h2>Results</h2>
+            <div id="resultsList" class="results-list">
+                <p class="empty-state">Check items to see results</p>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <button id="clearAllButton" class="danger-button">Clear All</button>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
