@@ -32,6 +32,28 @@
         </div>
 
         <div class="settings-section">
+            <h2>Auto-Check Settings</h2>
+            <div class="auto-check-controls">
+                <label class="toggle-label">
+                    <input type="checkbox" id="autoCheckEnabled" />
+                    <span>Enable automatic checks</span>
+                </label>
+                <div class="interval-control">
+                    <label for="checkInterval">Check every:</label>
+                    <select id="checkInterval">
+                        <option value="5">5 minutes</option>
+                        <option value="15">15 minutes</option>
+                        <option value="30" selected>30 minutes</option>
+                        <option value="60">1 hour</option>
+                        <option value="120">2 hours</option>
+                        <option value="360">6 hours</option>
+                    </select>
+                </div>
+                <label class="toggle-label">
+                    <input type="checkbox" id="notificationsEnabled" checked />
+                    <span>Show notifications when B-Stock found</span>
+                </label>
+            </div>
             <button id="clearAllButton" class="danger-button">Clear All</button>
         </div>
     </div>

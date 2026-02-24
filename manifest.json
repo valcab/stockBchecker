@@ -3,7 +3,7 @@
   "name": "Thomann Stock B Checker",
   "version": "1.0.0",
   "description": "Check if Stock B items are available on Thomann pages",
-  "permissions": ["activeTab", "scripting", "storage"],
+  "permissions": ["activeTab", "scripting", "storage", "alarms", "notifications"],
   "host_permissions": [
     "https://www.thomann.de/*",
     "https://thomann.de/*",

@@ -2,6 +2,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     loadItems();
     loadResults();
+    loadAutoCheckSettings();
     setupEventListeners();
 });
 
@@ -14,6 +15,38 @@ function setupEventListeners() {
         if (e.key === 'Enter') {
             addItem();
         }
+    });
+    
+    // Auto-check settings
+    document.getElementById('autoCheckEnabled').addEventListener('change', updateAutoCheckSettings);
+    document.getElementById('checkInterval').addEventListener('change', updateAutoCheckSettings);
+    document.getElementById('notificationsEnabled').addEventListener('change', updateAutoCheckSettings);
+}
+
+function loadAutoCheckSettings() {
+    chrome.storage.local.get(['autoCheckEnabled', 'checkInterval', 'notificationsEnabled'], (result) => {
+        document.getElementById('autoCheckEnabled').checked = result.autoCheckEnabled || false;
+        document.getElementById('checkInterval').value = result.checkInterval || '30';
+        document.getElementById('notificationsEnabled').checked = result.notificationsEnabled !== false;
+    });
+}
+
+function updateAutoCheckSettings() {
+    const autoCheckEnabled = document.getElementById('autoCheckEnabled').checked;
+    const checkInterval = parseInt(document.getElementById('checkInterval').value);
+    const notificationsEnabled = document.getElementById('notificationsEnabled').checked;
+    
+    chrome.storage.local.set({
+        autoCheckEnabled,
+        checkInterval,
+        notificationsEnabled
+    }, () => {
+        // Send message to background script to update alarm
+        chrome.runtime.sendMessage({
+            type: 'UPDATE_AUTO_CHECK',
+            enabled: autoCheckEnabled,
+            interval: checkInterval
+        });
     });
 }
 
@@ -109,9 +142,17 @@ function loadItems() {
                     <div class="item-id">Article #${item.id}</div>
                     <div class="item-url">${item.url}</div>
                 </div>
-                <button class="remove-button" onclick="removeItem(${index})">Remove</button>
+                <button class="remove-button" data-index="${index}">Remove</button>
             </div>
         `).join('');
+        
+        // Attach event listeners to all remove buttons
+        document.querySelectorAll('.remove-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const index = parseInt(e.target.getAttribute('data-index'));
+                removeItem(index);
+            });
+        });
     });
 }
 
@@ -221,8 +262,9 @@ function updateResult(articleId, isAvailable, error) {
 }
 
 function loadResults() {
-    chrome.storage.local.get('results', (result) => {
+    chrome.storage.local.get(['results', 'items'], (result) => {
         const results = result.results || {};
+        const items = result.items || [];
         const resultsList = document.getElementById('resultsList');
         
         const resultEntries = Object.entries(results);
@@ -234,15 +276,21 @@ function loadResults() {
         
         resultsList.innerHTML = resultEntries.map(([articleId, data]) => {
             const date = new Date(data.timestamp).toLocaleTimeString();
+            // Find the URL for this article ID
+            const item = items.find(i => i.id === articleId);
+            const url = item ? item.url : '#';
+            
             return `
-                <div class="result-row ${data.status}">
-                    <div class="result-item-id">Article #${articleId}</div>
-                    <div class="result-status">
-                        <span class="status-indicator ${data.status}"></span>
-                        <span>${data.message || 'Checking...'}</span>
+                <a href="${url}" target="_blank" class="result-row-link">
+                    <div class="result-row ${data.status}">
+                        <div class="result-item-id">Article #${articleId}</div>
+                        <div class="result-status">
+                            <span class="status-indicator ${data.status}"></span>
+                            <span>${data.message || 'Checking...'}</span>
+                        </div>
+                        <div class="result-timestamp">Checked at ${date}</div>
                     </div>
-                    <div class="result-timestamp">Checked at ${date}</div>
-                </div>
+                </a>
             `;
         }).join('');
     });
