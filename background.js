@@ -70,11 +70,17 @@ async function performAutoCheck() {
                 const response = await fetch(item.url);
                 const html = await response.text();
                 const isAvailable = checkStockBInHtml(html);
+                const price = extractPrice(html);
+                const name = extractName(html);
+                const previousPrice = previousResults[item.id]?.price;
                 
                 results[item.id] = {
                     status: isAvailable ? 'available' : 'unavailable',
                     message: isAvailable ? 'Stock B is available' : 'Stock B is not available',
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    price: price || previousPrice,
+                    priceChanged: price && previousPrice && price !== previousPrice,
+                    name: name || item.name
                 };
                 
                 // Send notification if B-Stock became available
@@ -83,7 +89,7 @@ async function performAutoCheck() {
                         type: 'basic',
                         iconUrl: 'icons/icon-128.png',
                         title: 'B-Stock Available!',
-                        message: `B-Stock is now available for article #${item.id}`,
+                        message: `B-Stock is now available for ${name || `article #${item.id}`}`,
                         priority: 2
                     });
                 }
@@ -91,7 +97,9 @@ async function performAutoCheck() {
                 results[item.id] = {
                     status: 'error',
                     message: error.message,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    price: previousResults[item.id]?.price,
+                    name: item.name
                 };
             }
         }
@@ -105,6 +113,42 @@ async function performAutoCheck() {
     } catch (error) {
         console.error('Auto-check error:', error);
     }
+}
+
+function extractName(html) {
+    // Extract product name from h1 tag
+    const match = html.match(/<h1[^>]*>\s*([^<]+?)\s*<\/h1>/i);
+    if (match) {
+        return match[1].trim();
+    }
+    return null;
+}
+
+function extractPrice(html) {
+    // Look for price patterns on Thomann pages
+    // Pattern 1: Price closest to "€" symbol or currency
+    // Match 1-6 digits, optional decimal separator, then 2 digits, followed by Euro symbol
+    let match = html.match(/([0-9]{1,6}[,.][0-9]{2})\s*€/i);
+    if (match) return match[1].replace(',', '.');
+    
+    // Pattern 2: Look for price in common contexts like sale price or regular price
+    // Find prices in readable format like "123.45" or "123,45"
+    match = html.match(/(?:price|€|eur)[\s:]*([0-9]{1,6}[,.][0-9]{2})/i);
+    if (match) return match[1].replace(',', '.');
+    
+    // Pattern 3: Look for data attributes with prices
+    match = html.match(/data-price["']?[=:]?["']?([0-9]{1,6}[,.][0-9]{2})/i);
+    if (match) return match[1].replace(',', '.');
+    
+    // Pattern 4: Price in context of main product price (larger prices)
+    // Look for bigger numbers with currency - prioritize numbers over 10€
+    match = html.match(/(?:EUR|\€|€)\s*([0-9]{2,6}[,.][0-9]{2})/i);
+    if (match) {
+        const price = match[1].replace(',', '.');
+        if (parseFloat(price) > 10) return price;  // Only return if significant price
+    }
+    
+    return null;
 }
 
 async function handleStockCheck(articleId, url) {

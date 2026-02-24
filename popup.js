@@ -116,6 +116,7 @@ function addItem() {
         items.push({
             id: articleId,
             url: url,
+            name: null,  // Will be populated on first check
             addedAt: new Date().toISOString()
         });
         
@@ -139,7 +140,7 @@ function loadItems() {
         itemsList.innerHTML = items.map((item, index) => `
             <div class="item-row">
                 <div class="item-info">
-                    <div class="item-id">Article #${item.id}</div>
+                    <div class="item-id">${item.name || `Article #${item.id}`}</div>
                     <div class="item-url">${item.url}</div>
                 </div>
                 <button class="remove-button" data-index="${index}">Remove</button>
@@ -206,7 +207,7 @@ function checkAllItems() {
         // Check each item
         items.forEach((item, index) => {
             setTimeout(() => {
-                checkStockB(item.id, item.url);
+                checkStockB(item.id, item.url, index);
             }, index * 500); // Stagger requests to avoid rate limiting
         });
         
@@ -218,16 +219,71 @@ function checkAllItems() {
     });
 }
 
-function checkStockB(articleId, url) {
+function checkStockB(articleId, url, itemIndex) {
     fetch(url)
         .then(response => response.text())
         .then(html => {
             const isAvailable = checkStockBInHtml(html);
-            updateResult(articleId, isAvailable, null);
+            const price = extractPrice(html);
+            const name = extractName(html);
+            updateResult(articleId, isAvailable, null, price);
+            
+            // Update item with the product name
+            if (name && itemIndex !== undefined) {
+                updateItemName(itemIndex, name);
+            }
         })
         .catch(error => {
-            updateResult(articleId, null, error.message);
+            updateResult(articleId, null, error.message, null);
         });
+}
+
+function extractName(html) {
+    // Extract product name from h1 tag
+    const match = html.match(/<h1[^>]*>\s*([^<]+?)\s*<\/h1>/i);
+    if (match) {
+        return match[1].trim();
+    }
+    return null;
+}
+
+function updateItemName(itemIndex, name) {
+    chrome.storage.local.get('items', (result) => {
+        const items = result.items || [];
+        if (items[itemIndex]) {
+            items[itemIndex].name = name;
+            chrome.storage.local.set({ items }, () => {
+                loadItems();
+            });
+        }
+    });
+}
+
+function extractPrice(html) {
+    // Look for price patterns on Thomann pages
+    // Pattern 1: Price closest to "€" symbol or currency
+    // Match 1-6 digits, optional decimal separator, then 2 digits, followed by Euro symbol
+    let match = html.match(/([0-9]{1,6}[,.][0-9]{2})\s*€/i);
+    if (match) return match[1].replace(',', '.');
+    
+    // Pattern 2: Look for price in common contexts like sale price or regular price
+    // Find prices in readable format like "123.45" or "123,45"
+    match = html.match(/(?:price|€|eur)[\s:]*([0-9]{1,6}[,.][0-9]{2})/i);
+    if (match) return match[1].replace(',', '.');
+    
+    // Pattern 3: Look for data attributes with prices
+    match = html.match(/data-price["']?[=:]?["']?([0-9]{1,6}[,.][0-9]{2})/i);
+    if (match) return match[1].replace(',', '.');
+    
+    // Pattern 4: Price in context of main product price (larger prices)
+    // Look for bigger numbers with currency - prioritize numbers over 10€
+    match = html.match(/(?:EUR|\€|€)\s*([0-9]{2,6}[,.][0-9]{2})/i);
+    if (match) {
+        const price = match[1].replace(',', '.');
+        if (parseFloat(price) > 10) return price;  // Only return if significant price
+    }
+    
+    return null;
 }
 
 function checkStockBInHtml(html) {
@@ -237,21 +293,25 @@ function checkStockBInHtml(html) {
     return hasBStock;
 }
 
-function updateResult(articleId, isAvailable, error) {
+function updateResult(articleId, isAvailable, error, price) {
     chrome.storage.local.get('results', (result) => {
         const results = result.results || {};
+        const previousPrice = results[articleId]?.price;
         
         if (error) {
             results[articleId] = {
                 status: 'error',
                 message: error,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                price: price || previousPrice
             };
         } else {
             results[articleId] = {
                 status: isAvailable ? 'available' : 'unavailable',
                 message: isAvailable ? 'Stock B is available' : 'Stock B is not available',
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                price: price || previousPrice,
+                priceChanged: price && previousPrice && price !== previousPrice
             };
         }
         
@@ -276,18 +336,21 @@ function loadResults() {
         
         resultsList.innerHTML = resultEntries.map(([articleId, data]) => {
             const date = new Date(data.timestamp).toLocaleTimeString();
-            // Find the URL for this article ID
+            // Find the URL and name for this article ID
             const item = items.find(i => i.id === articleId);
             const url = item ? item.url : '#';
+            const displayName = item?.name || `Article #${articleId}`;
+            const priceDisplay = data.price ? `<div class="result-price ${data.priceChanged ? 'price-changed' : ''}">Price: ${data.price}€</div>` : '';
             
             return `
                 <a href="${url}" target="_blank" class="result-row-link">
                     <div class="result-row ${data.status}">
-                        <div class="result-item-id">Article #${articleId}</div>
+                        <div class="result-item-id">${displayName}</div>
                         <div class="result-status">
                             <span class="status-indicator ${data.status}"></span>
                             <span>${data.message || 'Checking...'}</span>
                         </div>
+                        ${priceDisplay}
                         <div class="result-timestamp">Checked at ${date}</div>
                     </div>
                 </a>

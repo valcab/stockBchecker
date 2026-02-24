@@ -256,6 +256,23 @@ button {
     text-align: center;
 }
 
+.result-price {
+    font-weight: 500;
+    color: #2c3e50;
+    margin: 6px 0;
+    padding: 4px 6px;
+    background: #ecf0f1;
+    border-radius: 3px;
+    display: inline-block;
+    font-size: 11px;
+}
+
+.result-price.price-changed {
+    background: #fff3cd;
+    color: #856404;
+    font-weight: 600;
+}
+
 .auto-check-controls {
     margin-bottom: 15px;
 }

@@ -73,14 +73,25 @@ stockBchecker/
 └── README.md             # This file
 ```
 
+## Features Implemented
+
+### Auto-Check with Notifications
+- Automatically check items at specified intervals (5 min to 6 hours)
+- Get notifications when B-Stock becomes available
+- Background monitoring even when popup is closed
+
+### Price Tracking
+- Automatically tracks product prices alongside stock availability
+- Highlights when price changes between checks
+- Display prices in Thomann currency (€)
+
 ## Future Enhancements
 
-- [ ] Scheduled automatic checks
-- [ ] Notifications when Stock B becomes available
-- [ ] Support for multiple regional Thomann sites
-- [ ] Price tracking
-- [ ] Export check history
+- [ ] Price history graph
+- [ ] Price drop alerts
+- [ ] Export check history to CSV
 - [ ] Browser storage sync across devices
+- [ ] Multi-language support
 
 ## Troubleshooting
 
