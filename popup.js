@@ -260,29 +260,19 @@ function updateItemName(itemIndex, name) {
 }
 
 function extractPrice(html) {
-    // Look for price patterns on Thomann pages
-    // Pattern 1: Price closest to "€" symbol or currency
-    // Match 1-6 digits, optional decimal separator, then 2 digits, followed by Euro symbol
-    let match = html.match(/([0-9]{1,6}[,.][0-9]{2})\s*€/i);
+    // Look for main product price on Thomann pages.
+    // Prefer prices with thousands/large values to avoid small numbers like fees.
+    let match = html.match(/\b([1-9][0-9]{2,5}[,.][0-9]{2})\s*€\b/i);
     if (match) return match[1].replace(',', '.');
-    
-    // Pattern 2: Look for price in common contexts like sale price or regular price
-    // Find prices in readable format like "123.45" or "123,45"
-    match = html.match(/(?:price|€|eur)[\s:]*([0-9]{1,6}[,.][0-9]{2})/i);
+
+    // Common Thomann price containers.
+    match = html.match(/class=["'][^"']*price[^"']*["'][^>]*>\s*([1-9][0-9]{2,5}[,.][0-9]{2})/i);
     if (match) return match[1].replace(',', '.');
-    
-    // Pattern 3: Look for data attributes with prices
-    match = html.match(/data-price["']?[=:]?["']?([0-9]{1,6}[,.][0-9]{2})/i);
+
+    // Price near "TTC" (FR) or "inkl." (DE) markers.
+    match = html.match(/([1-9][0-9]{2,5}[,.][0-9]{2})\s*(?:€)?\s*(?:TTC|inkl\.)/i);
     if (match) return match[1].replace(',', '.');
-    
-    // Pattern 4: Price in context of main product price (larger prices)
-    // Look for bigger numbers with currency - prioritize numbers over 10€
-    match = html.match(/(?:EUR|\€|€)\s*([0-9]{2,6}[,.][0-9]{2})/i);
-    if (match) {
-        const price = match[1].replace(',', '.');
-        if (parseFloat(price) > 10) return price;  // Only return if significant price
-    }
-    
+
     return null;
 }
 
