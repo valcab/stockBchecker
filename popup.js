@@ -219,23 +219,34 @@ function checkAllItems() {
     });
 }
 
-function checkStockB(articleId, url, itemIndex) {
-    fetch(url)
-        .then(response => response.text())
-        .then(html => {
-            const isAvailable = checkStockBInHtml(html);
-            const price = extractPrice(html);
-            const name = extractName(html);
-            updateResult(articleId, isAvailable, null, price);
-            
-            // Update item with the product name
-            if (name && itemIndex !== undefined) {
-                updateItemName(itemIndex, name);
+async function checkStockB(articleId, url, itemIndex) {
+    try {
+        const response = await fetch(url);
+        const html = await response.text();
+        const isAvailable = checkStockBInHtml(html);
+        const price = extractPrice(html);
+        const name = extractName(html);
+        let bStockPrice = null;
+        let bStockUrl = null;
+
+        if (isAvailable) {
+            bStockUrl = extractBStockUrl(html, url);
+            if (bStockUrl) {
+                const bStockResponse = await fetch(bStockUrl);
+                const bStockHtml = await bStockResponse.text();
+                bStockPrice = extractPrice(bStockHtml);
             }
-        })
-        .catch(error => {
-            updateResult(articleId, null, error.message, null);
-        });
+        }
+
+        updateResult(articleId, isAvailable, null, price, bStockPrice, bStockUrl);
+
+        // Update item with the product name
+        if (name && itemIndex !== undefined) {
+            updateItemName(itemIndex, name);
+        }
+    } catch (error) {
+        updateResult(articleId, null, error.message, null, null, null);
+    }
 }
 
 function extractName(html) {
@@ -260,20 +271,39 @@ function updateItemName(itemIndex, name) {
 }
 
 function extractPrice(html) {
-    // Look for main product price on Thomann pages.
-    // Prefer prices with thousands/large values to avoid small numbers like fees.
-    let match = html.match(/\b([1-9][0-9]{2,5}[,.][0-9]{2})\s*€\b/i);
+    // Look for structured price metadata first.
+    let match = html.match(/itemprop=["']price["'][^>]*content=["']([0-9]+(?:[.,][0-9]{2})?)["']/i);
     if (match) return match[1].replace(',', '.');
 
-    // Common Thomann price containers.
-    match = html.match(/class=["'][^"']*price[^"']*["'][^>]*>\s*([1-9][0-9]{2,5}[,.][0-9]{2})/i);
+    match = html.match(/"price"\s*:\s*"([0-9]+(?:[.,][0-9]{2})?)"/i);
+    if (match) return match[1].replace(',', '.');
+
+    match = html.match(/data-price["']?[=:]?["']?([0-9]+(?:[.,][0-9]{2})?)/i);
+    if (match) return match[1].replace(',', '.');
+
+    // Price with Euro symbol (allow 2+ digits to support 69, 119, 569, etc).
+    match = html.match(/\b([1-9][0-9]{1,5}[,.][0-9]{2})\s*€\b/i);
+    if (match) return match[1].replace(',', '.');
+
+    // Common price containers.
+    match = html.match(/class=["'][^"']*price[^"']*["'][^>]*>\s*([1-9][0-9]{1,5}[,.][0-9]{2})/i);
     if (match) return match[1].replace(',', '.');
 
     // Price near "TTC" (FR) or "inkl." (DE) markers.
-    match = html.match(/([1-9][0-9]{2,5}[,.][0-9]{2})\s*(?:€)?\s*(?:TTC|inkl\.)/i);
+    match = html.match(/([1-9][0-9]{1,5}[,.][0-9]{2})\s*(?:€)?\s*(?:TTC|inkl\.)/i);
     if (match) return match[1].replace(',', '.');
 
     return null;
+}
+
+function extractBStockUrl(html, baseUrl) {
+    const match = html.match(/<div[^>]*class="[^"]*discounts-and-addons[^"]*"[^>]*>.*?href="([^"]*b_stock[^"]*\.htm)"/is);
+    if (!match) return null;
+    try {
+        return new URL(match[1], baseUrl).toString();
+    } catch (error) {
+        return null;
+    }
 }
 
 function checkStockBInHtml(html) {
@@ -283,17 +313,20 @@ function checkStockBInHtml(html) {
     return hasBStock;
 }
 
-function updateResult(articleId, isAvailable, error, price) {
+function updateResult(articleId, isAvailable, error, price, bStockPrice, bStockUrl) {
     chrome.storage.local.get('results', (result) => {
         const results = result.results || {};
         const previousPrice = results[articleId]?.price;
+        const previousBStockPrice = results[articleId]?.bStockPrice;
         
         if (error) {
             results[articleId] = {
                 status: 'error',
                 message: error,
                 timestamp: new Date().toISOString(),
-                price: price || previousPrice
+                price: price || previousPrice,
+                bStockPrice: bStockPrice || previousBStockPrice,
+                bStockUrl: bStockUrl || results[articleId]?.bStockUrl
             };
         } else {
             results[articleId] = {
@@ -301,13 +334,32 @@ function updateResult(articleId, isAvailable, error, price) {
                 message: isAvailable ? 'Stock B is available' : 'Stock B is not available',
                 timestamp: new Date().toISOString(),
                 price: price || previousPrice,
-                priceChanged: price && previousPrice && price !== previousPrice
+                priceChanged: price && previousPrice && price !== previousPrice,
+                bStockPrice: bStockPrice || previousBStockPrice,
+                bStockUrl: bStockUrl || results[articleId]?.bStockUrl,
+                bStockPriceChanged: bStockPrice && previousBStockPrice && bStockPrice !== previousBStockPrice
             };
         }
         
         chrome.storage.local.set({ results }, () => {
             loadResults();
+            // Update badge
+            updateBadge();
         });
+    });
+}
+
+function updateBadge() {
+    chrome.storage.local.get('results', (result) => {
+        const results = result.results || {};
+        const availableCount = Object.values(results).filter(r => r.status === 'available').length;
+        
+        if (availableCount > 0) {
+            chrome.action.setBadgeText({ text: availableCount.toString() });
+            chrome.action.setBadgeBackgroundColor({ color: '#28a745' });
+        } else {
+            chrome.action.setBadgeText({ text: '' });
+        }
     });
 }
 
@@ -331,6 +383,7 @@ function loadResults() {
             const url = item ? item.url : '#';
             const displayName = item?.name || `Article #${articleId}`;
             const priceDisplay = data.price ? `<div class="result-price ${data.priceChanged ? 'price-changed' : ''}">Price: ${data.price}€</div>` : '';
+            const bStockDisplay = data.bStockPrice ? `<div class="result-price ${data.bStockPriceChanged ? 'price-changed' : ''}">B-Stock: ${data.bStockPrice}€</div>` : '';
             
             return `
                 <a href="${url}" target="_blank" class="result-row-link">
@@ -341,6 +394,7 @@ function loadResults() {
                             <span>${data.message || 'Checking...'}</span>
                         </div>
                         ${priceDisplay}
+                        ${bStockDisplay}
                         <div class="result-timestamp">Checked at ${date}</div>
                     </div>
                 </a>

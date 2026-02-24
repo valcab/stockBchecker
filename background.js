@@ -40,22 +40,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Listen for alarms
 chrome.alarms.onAlarm.addListener((alarm) => {
+    console.log('Alarm triggered:', alarm.name);
     if (alarm.name === 'autoCheckAlarm') {
+        console.log('Running auto-check...');
         performAutoCheck();
     }
 });
 
 function setupAutoCheck(intervalMinutes) {
+    console.log('Setting up auto-check with interval:', intervalMinutes, 'minutes');
     // Clear existing alarm
     chrome.alarms.clear('autoCheckAlarm', () => {
-        // Create new alarm
+        // Create new alarm that runs immediately and then periodically
         chrome.alarms.create('autoCheckAlarm', {
+            delayInMinutes: 0.1, // Run almost immediately (6 seconds)
             periodInMinutes: intervalMinutes
         });
+        console.log('Auto-check alarm created');
     });
 }
 
 async function performAutoCheck() {
+    console.log('performAutoCheck started');
     try {
         // Get all items and settings
         const data = await chrome.storage.local.get(['items', 'results', 'notificationsEnabled', 'lastResults']);
@@ -64,15 +70,32 @@ async function performAutoCheck() {
         const notificationsEnabled = data.notificationsEnabled !== false;
         const results = {};
         
+        console.log('Checking', items.length, 'items. Notifications enabled:', notificationsEnabled);
+        
         // Check each item
         for (const item of items) {
             try {
+                console.log('Fetching:', item.url);
                 const response = await fetch(item.url);
                 const html = await response.text();
                 const isAvailable = checkStockBInHtml(html);
                 const price = extractPrice(html);
                 const name = extractName(html);
                 const previousPrice = previousResults[item.id]?.price;
+                const previousBStockPrice = previousResults[item.id]?.bStockPrice;
+                let bStockPrice = null;
+                let bStockUrl = null;
+
+                console.log(`Item ${item.id}: B-Stock available:`, isAvailable);
+
+                if (isAvailable) {
+                    bStockUrl = extractBStockUrl(html, item.url);
+                    if (bStockUrl) {
+                        const bStockResponse = await fetch(bStockUrl);
+                        const bStockHtml = await bStockResponse.text();
+                        bStockPrice = extractPrice(bStockHtml);
+                    }
+                }
                 
                 results[item.id] = {
                     status: isAvailable ? 'available' : 'unavailable',
@@ -80,11 +103,15 @@ async function performAutoCheck() {
                     timestamp: new Date().toISOString(),
                     price: price || previousPrice,
                     priceChanged: price && previousPrice && price !== previousPrice,
+                    bStockPrice: bStockPrice || previousBStockPrice,
+                    bStockPriceChanged: bStockPrice && previousBStockPrice && bStockPrice !== previousBStockPrice,
+                    bStockUrl: bStockUrl || previousResults[item.id]?.bStockUrl,
                     name: name || item.name
                 };
                 
                 // Send notification if B-Stock became available
                 if (notificationsEnabled && isAvailable && previousResults[item.id]?.status !== 'available') {
+                    console.log('Sending notification for', name || item.id);
                     chrome.notifications.create({
                         type: 'basic',
                         iconUrl: 'icons/icon-128.png',
@@ -94,11 +121,14 @@ async function performAutoCheck() {
                     });
                 }
             } catch (error) {
+                console.error('Error checking item:', error);
                 results[item.id] = {
                     status: 'error',
                     message: error.message,
                     timestamp: new Date().toISOString(),
                     price: previousResults[item.id]?.price,
+                    bStockPrice: previousResults[item.id]?.bStockPrice,
+                    bStockUrl: previousResults[item.id]?.bStockUrl,
                     name: item.name
                 };
             }
@@ -110,8 +140,23 @@ async function performAutoCheck() {
             lastResults: results
         });
         
+        // Update badge if any B-Stock is available
+        updateBadge(results);
+        
     } catch (error) {
         console.error('Auto-check error:', error);
+    }
+}
+
+function updateBadge(results) {
+    // Count how many items have available B-Stock
+    const availableCount = Object.values(results).filter(r => r.status === 'available').length;
+    
+    if (availableCount > 0) {
+        chrome.action.setBadgeText({ text: availableCount.toString() });
+        chrome.action.setBadgeBackgroundColor({ color: '#28a745' });
+    } else {
+        chrome.action.setBadgeText({ text: '' });
     }
 }
 
@@ -125,20 +170,39 @@ function extractName(html) {
 }
 
 function extractPrice(html) {
-    // Look for main product price on Thomann pages.
-    // Prefer prices with thousands/large values to avoid small numbers like fees.
-    let match = html.match(/\b([1-9][0-9]{2,5}[,.][0-9]{2})\s*€\b/i);
+    // Look for structured price metadata first.
+    let match = html.match(/itemprop=["']price["'][^>]*content=["']([0-9]+(?:[.,][0-9]{2})?)["']/i);
     if (match) return match[1].replace(',', '.');
 
-    // Common Thomann price containers.
-    match = html.match(/class=["'][^"']*price[^"']*["'][^>]*>\s*([1-9][0-9]{2,5}[,.][0-9]{2})/i);
+    match = html.match(/"price"\s*:\s*"([0-9]+(?:[.,][0-9]{2})?)"/i);
+    if (match) return match[1].replace(',', '.');
+
+    match = html.match(/data-price["']?[=:]?["']?([0-9]+(?:[.,][0-9]{2})?)/i);
+    if (match) return match[1].replace(',', '.');
+
+    // Price with Euro symbol (allow 2+ digits to support 69, 119, 569, etc).
+    match = html.match(/\b([1-9][0-9]{1,5}[,.][0-9]{2})\s*€\b/i);
+    if (match) return match[1].replace(',', '.');
+
+    // Common price containers.
+    match = html.match(/class=["'][^"']*price[^"']*["'][^>]*>\s*([1-9][0-9]{1,5}[,.][0-9]{2})/i);
     if (match) return match[1].replace(',', '.');
 
     // Price near "TTC" (FR) or "inkl." (DE) markers.
-    match = html.match(/([1-9][0-9]{2,5}[,.][0-9]{2})\s*(?:€)?\s*(?:TTC|inkl\.)/i);
+    match = html.match(/([1-9][0-9]{1,5}[,.][0-9]{2})\s*(?:€)?\s*(?:TTC|inkl\.)/i);
     if (match) return match[1].replace(',', '.');
 
     return null;
+}
+
+function extractBStockUrl(html, baseUrl) {
+    const match = html.match(/<div[^>]*class="[^"]*discounts-and-addons[^"]*"[^>]*>.*?href="([^"]*b_stock[^"]*\.htm)"/is);
+    if (!match) return null;
+    try {
+        return new URL(match[1], baseUrl).toString();
+    } catch (error) {
+        return null;
+    }
 }
 
 async function handleStockCheck(articleId, url) {
