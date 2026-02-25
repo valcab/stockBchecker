@@ -383,7 +383,7 @@ function loadResults() {
             const url = item ? item.url : '#';
             const displayName = item?.name || `Article #${articleId}`;
             const priceDisplay = data.price ? `<div class="result-price ${data.priceChanged ? 'price-changed' : ''}">Price: ${data.price}€</div>` : '';
-            const bStockDisplay = data.bStockPrice ? `<div class="result-price ${data.bStockPriceChanged ? 'price-changed' : ''}">B-Stock: ${data.bStockPrice}€</div>` : '';
+            const bStockDisplay = (data.status === 'available' && data.bStockPrice) ? `<div class="result-price ${data.bStockPriceChanged ? 'price-changed' : ''}">B-Stock: ${data.bStockPrice}€</div>` : '';
             
             return `
                 <a href="${url}" target="_blank" class="result-row-link">
