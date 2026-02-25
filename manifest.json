@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Thomann Stock B Checker",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Check if Stock B items are available on Thomann pages",
   "permissions": ["activeTab", "scripting", "storage", "alarms", "notifications"],
   "host_permissions": [
@@ -16,11 +16,12 @@
     "https://*.thomann.*/*"
   ],
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "index.html",
     "default_title": "Thomann Stock B Checker"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background.js",
+    "type": "module"
   },
   "icons": {
     "16": "icons/icon-16.png",

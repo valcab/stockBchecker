@@ -1,115 +1,69 @@
-# Thomann Stock B Checker Extension
+# Thomann Stock B Checker
 
-A Chrome extension that checks the availability of Stock B items on Thomann product pages. This extension allows you to track multiple items and quickly check their stock status.
+A modern Chrome extension built with React and shadcn/ui to track and check Stock B availability on Thomann product pages.
 
 ## Features
 
-- ✅ Track multiple Thomann articles
-- ✅ Check Stock B availability for all items at once
-- ✅ View check history with timestamps
-- ✅ Easy-to-use popup interface
-- ✅ Quick add/remove items functionality
+- 🎯 **Track Multiple Items** - Add articles by ID or URL
+- 🔄 **Batch Checking** - Check multiple items simultaneously  
+- ⏰ **Auto-Check** - Automatic periodic checks with configurable intervals
+- 🔔 **Notifications** - Get notified when B-Stock becomes available
+- 💜 **Modern UI** - Clean, compact interface with purple theme
+- 📊 **Results History** - View availability status with timestamps
+- 💰 **Price Tracking** - Monitor both regular and B-Stock prices
 
-## Installation
+## Quick Start
 
-1. Clone or download this repository
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" (toggle in top right)
-4. Click "Load unpacked"
-5. Select the `stockBchecker` folder
-6. The extension icon will appear in your Chrome toolbar
+### For Users
+
+1. Download or clone this repository
+2. See [BUILD.md](BUILD.md) for build instructions
+3. Load the extension in Chrome (see below)
+
+### Loading in Chrome
+
+1. Go to `chrome://extensions/`
+2. Enable "Developer mode"
+3. Click "Load unpacked"
+4. Select the `dist/` folder (after building)
+
+## Development
+
+See [BUILD.md](BUILD.md) for detailed setup and development instructions.
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+```
 
 ## Usage
 
-### Adding Items
+1. **Add Items**: Enter a Thomann article URL or ID
+2. **Check Stock**: Click "Check All Items" to check availability
+3. **Auto-Check**: Enable automatic checking in settings
+4. **Remove Items**: Click the trash icon to remove tracked items
 
-1. Click the extension icon in your Chrome toolbar
-2. Enter a Thomann article ID (e.g., "123456") or full URL (e.g., "https://www.thomann.de/123456.html")
-3. Click "Add Item" or press Enter
-4. The item will appear in the "Tracked Items" list
+## Tech Stack
 
-### Checking Stock
+- React 18 + TypeScript
+- Vite
+- Tailwind CSS
+- shadcn/ui
+- Chrome Extension Manifest V3
 
-1. Click the "Check All Items" button
-2. Wait for the checks to complete (typically 2-5 seconds)
-3. Results appear in the "Results" section with status indicators:
-   - 🟢 Green: Stock B is available
-   - 🔴 Red: Stock B is not available
-   - 🟡 Yellow: Currently checking
-   - Gray: Error during check
+## Original Files
 
-### Managing Items
-
-- Click "Remove" next to any item to stop tracking it
-- Click "Clear All" to remove all tracked items and results
-
-## Technical Details
-
-- **Manifest Version**: 3
-- **Permissions**: 
-  - `activeTab` - Required to interact with active tab
-  - `scripting` - Required to run content scripts
-  - `storage` - Required to save items and results
-- **Host Permissions**: Access to Thomann.de website
-
-## How It Works
-
-The extension:
-1. Fetches Thomann product pages using the article URLs
-2. Searches for Stock B availability indicators in the page HTML
-3. Stores results locally in your browser
-4. Updates the popup UI with real-time status
-
-## Project Structure
-
-```
-stockBchecker/
-├── manifest.json          # Extension configuration
-├── popup.html            # Main UI
-├── popup.js              # Popup logic and event handlers
-├── styles.css            # UI styling
-├── background.js         # Background service worker
-├── icons/                # Extension icons
-└── README.md             # This file
-```
-
-## Features Implemented
-
-### Auto-Check with Notifications
-- Automatically check items at specified intervals (5 min to 6 hours)
-- Get notifications when B-Stock becomes available
-- Background monitoring even when popup is closed
-
-### Price Tracking
-- Automatically tracks product prices alongside stock availability
-- Highlights when price changes between checks
-- Display prices in Thomann currency (€)
-
-## Future Enhancements
-
-- [ ] Price history graph
-- [ ] Price drop alerts
-- [ ] Export check history to CSV
-- [ ] Browser storage sync across devices
-- [ ] Multi-language support
-
-## Troubleshooting
-
-**Extension doesn't load:**
-- Make sure you're in Developer mode
-- Check that all files are in the correct directory
-- Reload the extension after making changes
-
-**Stock check fails:**
-- Ensure you have an active internet connection
-- Verify the article ID is correct
-- Check that the Thomann website is accessible
-
-**Results not updating:**
-- Clear your browser cache
-- Reload the extension
-- Try removing and re-adding the item
+The original vanilla JS implementation is backed up as:
+- `popup.html.bak`
+- `popup.js.bak`
+- `styles.css.bak`
 
 ## License
 
-This project is provided as-is for personal use.
+MIT
