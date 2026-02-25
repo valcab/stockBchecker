@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { motion } from 'framer-motion'
 import { PackageCheck, Trash2, RefreshCw, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -214,7 +215,14 @@ function App() {
         <Tabs defaultValue="results" className="h-full flex flex-col">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="results">{t.tabResults}</TabsTrigger>
-            <TabsTrigger value="items">{t.tabItems} ({items.length})</TabsTrigger>
+            <TabsTrigger value="items">
+              <div className="flex items-center gap-1.5">
+                <span>{t.tabItems}</span>
+                <span className="inline-flex items-center justify-center min-w-4 h-4 px-1 text-[10px] font-medium text-white bg-slate-400 dark:bg-slate-600 rounded-full">
+                  {items.length}
+                </span>
+              </div>
+            </TabsTrigger>
             <TabsTrigger value="settings">{t.tabSettings}</TabsTrigger>
           </TabsList>
 
@@ -334,33 +342,35 @@ function App() {
                       checked={selectedItems.size === items.length}
                       onCheckedChange={handleToggleAll}
                     />
-                    <Label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
+                    <Label htmlFor="select-all" className="text-sm font-medium cursor-pointer flex items-center gap-1.5">
                       {selectedItems.size === items.length ? t.deselectAll || 'Deselect All' : t.selectAll || 'Select All'}
+                      {selectedItems.size > 0 && (
+                        <span className="inline-flex items-center justify-center min-w-3 h-3 px-0.5 text-[8px] font-bold text-white bg-purple-600 rounded-full">
+                          {selectedItems.size}
+                        </span>
+                      )}
                     </Label>
                   </div>
                   {selectedItems.size > 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      {selectedItems.size} {t.selected || 'selected'}
-                    </span>
+                    <Button
+                      variant="destructive"
+                      size="xs"
+                      onClick={handleClearSelected}
+                      className="animate-in fade-in slide-in-from-right-2 duration-300"
+                    >
+                      {t.clearAllButton}
+                    </Button>
                   )}
                 </div>
 
-                {selectedItems.size > 0 && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleClearSelected}
-                    className="w-full animate-in fade-in slide-in-from-top-2 duration-300"
-                  >
-                    {t.clearAllButton}
-                  </Button>
-                )}
-
                 <div className="space-y-2">
                   {items.map((item, index) => (
-                    <div
+                    <motion.div
                       key={item.id}
-                      className="flex items-center justify-between p-2 rounded-md border bg-card hover:bg-accent/50 transition-colors"
+                      className="flex items-center justify-between p-2 rounded-md border bg-card hover:bg-accent/50 transition-colors group"
+                      initial={false}
+                      whileHover={{ scale: 1.005 }}
+                      transition={{ duration: 0.2 }}
                     >
                       <div className="flex items-center space-x-2 flex-1 min-w-0">
                         <Checkbox
@@ -381,11 +391,11 @@ function App() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleRemoveItem(index)}
-                        className="ml-2 h-8 w-8 flex-shrink-0"
+                        className="ml-2 h-8 w-8 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               </>
@@ -474,9 +484,9 @@ function App() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="fr">Français</SelectItem>
-                      <SelectItem value="de">Deutsch</SelectItem>
+                      <SelectItem value="en">🇬🇧 English</SelectItem>
+                      <SelectItem value="fr">🇫🇷 Français</SelectItem>
+                      <SelectItem value="de">🇩🇪 Deutsch</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
