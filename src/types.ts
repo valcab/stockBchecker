@@ -16,6 +16,7 @@ export interface CheckResult {
   bStockPrice?: string
   bStockUrl?: string
   bStockPriceChanged?: boolean
+  imageUrl?: string
 }
 
 export interface StorageData {

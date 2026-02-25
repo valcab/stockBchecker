@@ -69,6 +69,50 @@ export function extractPrice(html: string): string | null {
   return null
 }
 
+export function extractImageUrl(html: string, baseUrl: string): string | null {
+  // Try to find product image
+  let match = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i)
+  if (match) {
+    try {
+      return new URL(match[1], baseUrl).toString()
+    } catch {
+      return match[1]
+    }
+  }
+
+  // Try data-img or similar attributes
+  match = html.match(/<img[^>]*data-img=["']([^"']+)["'][^>]*product/i)
+  if (match) {
+    try {
+      return new URL(match[1], baseUrl).toString()
+    } catch {
+      return match[1]
+    }
+  }
+
+  // Try img with product in class or id
+  match = html.match(/<img[^>]*(?:class|id)=["'][^"']*product[^"']*["'][^>]*src=["']([^"']+)["']/i)
+  if (match) {
+    try {
+      return new URL(match[1], baseUrl).toString()
+    } catch {
+      return match[1]
+    }
+  }
+
+  // Generic product image
+  match = html.match(/<img[^>]*src=["']([^"']*\/(?:products|images)\/[^"']+\.[a-z]{3,4})["']/i)
+  if (match) {
+    try {
+      return new URL(match[1], baseUrl).toString()
+    } catch {
+      return match[1]
+    }
+  }
+
+  return null
+}
+
 export function extractBStockUrl(html: string, baseUrl: string): string | null {
   const match = html.match(/<div[^>]*class="[^"]*discounts-and-addons[^"]*"[^>]*>.*?href="([^"]*b_stock[^"]*\.htm)"/is)
   if (!match) return null
@@ -92,6 +136,7 @@ export async function checkStockB(
     const isAvailable = checkStockBInHtml(html)
     const price = extractPrice(html)
     const name = extractName(html)
+    const imageUrl = extractImageUrl(html, url)
     let bStockPrice = null
     let bStockUrl = null
 
@@ -112,6 +157,7 @@ export async function checkStockB(
         price: price || undefined,
         bStockPrice: bStockPrice || undefined,
         bStockUrl: bStockUrl || undefined,
+        imageUrl: imageUrl || undefined,
       },
       name,
     }

@@ -12,8 +12,7 @@
     "https://www.thomann.com/*",
     "https://thomann.com/*",
     "https://www.thomann.es/*",
-    "https://thomann.es/*",
-    "https://*.thomann.*/*"
+    "https://thomann.es/*"
   ],
   "action": {
     "default_popup": "index.html",

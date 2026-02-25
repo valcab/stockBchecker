@@ -56,6 +56,13 @@ export const translations = {
     
     // Other
     article: 'Article',
+    
+    // About
+    aboutTitle: 'About This Extension',
+    aboutDescription: 'This extension helps you track Stock B availability on Thomann products. Get notified when your favorite gear becomes available at a great price!',
+    madeBy: 'Made by',
+    website: 'Website',
+    linkedin: 'LinkedIn',
   },
   fr: {
     // Header
@@ -112,6 +119,13 @@ export const translations = {
     
     // Other
     article: 'Article',
+    
+    // About
+    aboutTitle: 'À propos de cette extension',
+    aboutDescription: 'Cette extension vous aide à suivre la disponibilité du Stock B sur les produits Thomann. Soyez notifié quand votre matériel préféré devient disponible à un excellent prix !',
+    madeBy: 'Créé par',
+    website: 'Site web',
+    linkedin: 'LinkedIn',
   },
   de: {
     // Header
@@ -168,6 +182,13 @@ export const translations = {
     
     // Other
     article: 'Artikel',
+    
+    // About
+    aboutTitle: 'Über diese Erweiterung',
+    aboutDescription: 'Diese Erweiterung hilft Ihnen, die Verfügbarkeit von B-Ware bei Thomann-Produkten zu verfolgen. Lassen Sie sich benachrichtigen, wenn Ihre Lieblingsausrüstung zu einem tollen Preis verfügbar wird!',
+    madeBy: 'Erstellt von',
+    website: 'Webseite',
+    linkedin: 'LinkedIn',
   },
 }
 
