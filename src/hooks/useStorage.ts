@@ -13,6 +13,37 @@ export function useStorage() {
 
   useEffect(() => {
     loadFromStorage()
+
+    const handleStorageChange = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      areaName: string
+    ) => {
+      if (areaName !== 'local') return
+
+      if (changes.items) {
+        setItems((changes.items.newValue as TrackedItem[]) || [])
+      }
+      if (changes.results) {
+        setResults((changes.results.newValue as Record<string, CheckResult>) || {})
+      }
+      if (changes.autoCheckEnabled) {
+        setAutoCheckEnabled(Boolean(changes.autoCheckEnabled.newValue))
+      }
+      if (changes.checkInterval) {
+        setCheckInterval((changes.checkInterval.newValue as number) || 30)
+      }
+      if (changes.notificationsEnabled) {
+        setNotificationsEnabled(changes.notificationsEnabled.newValue !== false)
+      }
+      if (changes.language) {
+        setLanguage((changes.language.newValue as Language) || getBrowserLanguage())
+      }
+    }
+
+    chrome.storage.onChanged.addListener(handleStorageChange)
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange)
+    }
   }, [])
 
   const loadFromStorage = () => {

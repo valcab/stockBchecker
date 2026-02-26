@@ -51,6 +51,14 @@ function App() {
   
   const t = useMemo(() => getTranslations(language), [language])
 
+  const notifyBStockDetected = (displayName: string) => {
+    if (!notificationsEnabled) return
+    chrome.runtime.sendMessage({
+      type: 'STOCKB_NOTIFY_AVAILABLE',
+      displayName,
+    })
+  }
+
   // Check all items on mount
   useEffect(() => {
     if (items.length > 0) {
@@ -140,6 +148,10 @@ function App() {
       bStockPriceChanged: false,
     }
     saveResults(newResults)
+
+    if (result.status === 'available') {
+      notifyBStockDetected(name || `${t.article} #${articleId}`)
+    }
 
     // Update item name if found
     if (name) {
@@ -242,6 +254,13 @@ function App() {
       }
 
       saveResults(newResults)
+
+      if (
+        result.status === 'available' &&
+        results[item.id]?.status !== 'available'
+      ) {
+        notifyBStockDetected(name || item.name || `${t.article} #${item.id}`)
+      }
 
       if (name && !item.name) {
         const updatedItems = [...items]

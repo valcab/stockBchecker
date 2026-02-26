@@ -16,10 +16,39 @@ chrome.runtime.onInstalled.addListener(() => {
     });
 });
 
+chrome.runtime.onStartup.addListener(() => {
+    chrome.storage.local.get(['autoCheckEnabled', 'checkInterval'], (result) => {
+        if (result.autoCheckEnabled) {
+            setupAutoCheck(result.checkInterval || 30);
+        }
+    });
+});
+
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.type === 'STOCKB_NOTIFY_AVAILABLE') {
+        sendBStockNotification(request.displayName)
+            .then(result => sendResponse({ success: true, ...result }))
+            .catch(error => sendResponse({ success: false, error: error.message }));
+        return true;
+    }
+
+    if (request.type === 'STOCKB_IS_TRACKED') {
+        isItemTracked(request.url)
+            .then(result => sendResponse({ success: true, ...result }))
+            .catch(error => sendResponse({ success: false, error: error.message }));
+        return true;
+    }
+
     if (request.type === 'STOCKB_ADD_ITEM') {
         handleQuickAddItem(request.url)
+            .then(result => sendResponse({ success: true, ...result }))
+            .catch(error => sendResponse({ success: false, error: error.message }));
+        return true;
+    }
+
+    if (request.type === 'STOCKB_REMOVE_ITEM') {
+        handleQuickRemoveItem(request.url)
             .then(result => sendResponse({ success: true, ...result }))
             .catch(error => sendResponse({ success: false, error: error.message }));
         return true;
@@ -87,6 +116,72 @@ async function handleQuickAddItem(url) {
     await chrome.storage.local.set({ items: [...items, newItem] });
 
     return { added: true, item: newItem };
+}
+
+async function isItemTracked(url) {
+    if (!url || typeof url !== 'string') {
+        throw new Error('Missing item URL');
+    }
+
+    const itemId = extractArticleIdFromUrl(url);
+    const data = await chrome.storage.local.get(['items']);
+    const items = data.items || [];
+
+    const trackedItem = items.find(item => item.id === itemId || item.url === url);
+    return {
+        tracked: !!trackedItem,
+        item: trackedItem || null,
+    };
+}
+
+async function handleQuickRemoveItem(url) {
+    if (!url || typeof url !== 'string') {
+        throw new Error('Missing item URL');
+    }
+
+    const itemId = extractArticleIdFromUrl(url);
+    const data = await chrome.storage.local.get(['items', 'results']);
+    const items = data.items || [];
+    const results = data.results || {};
+
+    const removedItems = items.filter(item => item.id === itemId || item.url === url);
+    if (removedItems.length === 0) {
+        return { removed: false, reason: 'not-tracked' };
+    }
+
+    const updatedItems = items.filter(item => item.id !== itemId && item.url !== url);
+    const updatedResults = { ...results };
+    for (const removedItem of removedItems) {
+        delete updatedResults[removedItem.id];
+        delete updatedResults[removedItem.url];
+    }
+
+    await chrome.storage.local.set({
+        items: updatedItems,
+        results: updatedResults,
+    });
+
+    return {
+        removed: true,
+        removedIds: removedItems.map(item => item.id),
+    };
+}
+
+async function sendBStockNotification(displayName) {
+    const data = await chrome.storage.local.get(['notificationsEnabled']);
+    if (data.notificationsEnabled === false) {
+        return { sent: false, reason: 'disabled' };
+    }
+
+    await chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon-128.png',
+        title: 'B-Stock Available!',
+        message: `B-Stock is available for ${displayName || 'a tracked item'}`,
+        priority: 2,
+    });
+
+    return { sent: true };
 }
 
 // Listen for alarms
@@ -160,16 +255,10 @@ async function performAutoCheck() {
                     name: name || item.name
                 };
                 
-                // Send notification if B-Stock became available
-                if (notificationsEnabled && isAvailable && previousResults[item.id]?.status !== 'available') {
+                // Send a notification for every auto-check where B-Stock is available.
+                if (notificationsEnabled && isAvailable) {
                     console.log('Sending notification for', name || item.id);
-                    chrome.notifications.create({
-                        type: 'basic',
-                        iconUrl: 'icons/icon-128.png',
-                        title: 'B-Stock Available!',
-                        message: `B-Stock is now available for ${name || `article #${item.id}`}`,
-                        priority: 2
-                    });
+                    await sendBStockNotification(name || `article #${item.id}`);
                 }
             } catch (error) {
                 console.error('Error checking item:', error);
