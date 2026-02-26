@@ -18,6 +18,13 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.type === 'STOCKB_ADD_ITEM') {
+        handleQuickAddItem(request.url)
+            .then(result => sendResponse({ success: true, ...result }))
+            .catch(error => sendResponse({ success: false, error: error.message }));
+        return true;
+    }
+
     if (request.type === 'CHECK_STOCK') {
         // Handle stock check requests
         handleStockCheck(request.articleId, request.url)
@@ -37,6 +44,50 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 });
+
+function extractArticleIdFromUrl(input) {
+    const normalized = input.trim();
+
+    let match = normalized.match(/[/_]product[_-]?(\d+)/i);
+    if (match) return match[1];
+
+    match = normalized.match(/\/(\d+)\.html?/i);
+    if (match) return match[1];
+
+    match = normalized.match(/\/p(\d+)\//i);
+    if (match) return match[1];
+
+    match = normalized.match(/(\d{5,})/);
+    if (match) return match[1];
+
+    return normalized;
+}
+
+async function handleQuickAddItem(url) {
+    if (!url || typeof url !== 'string') {
+        throw new Error('Missing item URL');
+    }
+
+    const itemId = extractArticleIdFromUrl(url);
+    const data = await chrome.storage.local.get(['items']);
+    const items = data.items || [];
+
+    const alreadyTracked = items.some(item => item.id === itemId || item.url === url);
+    if (alreadyTracked) {
+        return { added: false, reason: 'already-tracked' };
+    }
+
+    const newItem = {
+        id: itemId,
+        url,
+        name: null,
+        addedAt: new Date().toISOString(),
+    };
+
+    await chrome.storage.local.set({ items: [...items, newItem] });
+
+    return { added: true, item: newItem };
+}
 
 // Listen for alarms
 chrome.alarms.onAlarm.addListener((alarm) => {

@@ -305,48 +305,47 @@ function App() {
 
       {/* Add Item Section */}
       <div className="px-4 pt-4">
-        <Card>
-          <CardContent className="pt-4 pb-4 space-y-2">
-            <div className="space-y-1">
+
+
               <div className="flex gap-2">
-                <div className="flex flex-1 items-center rounded-md border bg-background overflow-hidden">
-                  <Input
-                    placeholder={t.inputPlaceholder}
-                    value={input}
-                    onChange={(e) => {
-                      setInput(e.target.value)
-                      setInputError('')
-                    }}
-                    onKeyPress={handleKeyPress}
-                    className={`border-none focus-visible:ring-0 flex-1 bg-transparent ${inputError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                  />
-                  <div className="h-full w-px bg-border" />
-                  <TooltipProvider delayDuration={50}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={handleAddItem}
-                          className="h-10 w-10 flex items-center justify-center bg-transparent hover:bg-accent transition-colors"
-                        >
-                          <Plus className="h-5 w-5" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{t.addButton}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                <div className="flex w-full max-w-md items-center space-x-2">
+                  <div className="flex flex-1 items-stretch rounded-md border bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 overflow-hidden">
+                    <Input
+                      placeholder={t.inputPlaceholder}
+                      value={input}
+                      onChange={(e) => {
+                        setInput(e.target.value)
+                        setInputError('')
+                      }}
+                      onKeyPress={handleKeyPress}
+                      className={`flex-1 border-none focus-visible:ring-0 bg-transparent ${inputError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                    />
+                    <TooltipProvider delayDuration={50}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            onClick={handleAddItem}
+                            size="icon"
+                            className="rounded-none rounded-r-md border-l border-border"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t.addButton}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                 </div>
               </div>
               {inputError && (
-                <p className="text-xs text-destructive animate-in fade-in slide-in-from-top-1 duration-200">
+                <p className="text-xs text-destructive animate-in fade-in slide-in-from-top-1 pt-2 duration-200">
                   {inputError}
                 </p>
               )}
-            </div>
-          </CardContent>
-        </Card>
+            
       </div>
 
       {/* Tabs Section - Scrollable */}

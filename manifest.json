@@ -18,6 +18,22 @@
     "default_popup": "index.html",
     "default_title": "Thomann Stock B Checker"
   },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.thomann.de/*",
+        "https://thomann.de/*",
+        "https://www.thomann.fr/*",
+        "https://thomann.fr/*",
+        "https://www.thomann.com/*",
+        "https://thomann.com/*",
+        "https://www.thomann.es/*",
+        "https://thomann.es/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "background": {
     "service_worker": "src/background.js",
     "type": "module"
