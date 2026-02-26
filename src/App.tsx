@@ -414,7 +414,7 @@ function App() {
                     <Label htmlFor="select-all-results" className="text-sm font-medium cursor-pointer flex items-center gap-1.5">
                       {selectedItems.size === sortedResults.length && sortedResults.length > 0 ? t.deselectAll || 'Deselect All' : t.selectAll || 'Select All'}
                       {selectedItems.size > 0 && (
-                        <span className="inline-flex items-center justify-center min-w-3 h-3 px-0.5 text-[8px] font-bold text-white bg-purple-600 rounded-full">
+                        <span className="inline-flex items-center justify-center min-w-3 h-3 px-0.5 text-[8px] font-bold text-white bg-blue-600 rounded-full">
                           {selectedItems.size}
                         </span>
                       )}
@@ -526,7 +526,7 @@ function App() {
                                 <span
                                   className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                     data.priceChanged
-                                      ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200'
+                                      ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
                                       : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
                                   }`}
                                 >

@@ -89,8 +89,8 @@
   btn.style.fontWeight = '500';
   btn.style.lineHeight = '1';
   btn.style.fontFamily = 'ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif';
-  btn.style.background = 'hsl(270 60% 70%)';
-  btn.style.color = 'hsl(270 60% 10%)';
+  btn.style.background = 'hsl(214 100% 45%)';
+  btn.style.color = 'hsl(0 0% 100%)';
   btn.style.boxShadow = '0 6px 18px rgba(0,0,0,0.18)';
   btn.style.cursor = 'pointer';
   btn.style.transition = 'background-color 120ms ease, transform 120ms ease, box-shadow 120ms ease';
@@ -100,19 +100,19 @@
 
   const applyTrackedStyle = (tracked) => {
     if (tracked) {
-      btn.style.background = 'hsl(0 84% 60%)';
+      btn.style.background = 'hsl(214 100% 38%)';
       btn.style.color = 'hsl(210 40% 98%)';
       return;
     }
-    btn.style.background = 'hsl(270 60% 70%)';
-    btn.style.color = 'hsl(270 60% 10%)';
+    btn.style.background = 'hsl(214 100% 45%)';
+    btn.style.color = 'hsl(0 0% 100%)';
   };
 
   btn.onmouseenter = () => {
     if (isAddedState) {
-      btn.style.background = 'hsl(142 71% 41%)';
+      btn.style.background = 'hsl(214 100% 40%)';
     } else {
-      btn.style.background = isTracked ? 'hsl(0 84% 56%)' : 'hsl(270 60% 66%)';
+      btn.style.background = isTracked ? 'hsl(214 100% 34%)' : 'hsl(214 100% 40%)';
     }
     btn.style.transform = 'translateY(-1px)';
   };
@@ -129,7 +129,7 @@
     if (state === 'added') {
       icon.innerHTML = '<path d="M20 6 9 17l-5-5"></path>';
       label.textContent = t('added');
-      btn.style.background = 'hsl(142 71% 45%)';
+      btn.style.background = 'hsl(214 100% 42%)';
       btn.style.color = 'hsl(0 0% 100%)';
       isAddedState = true;
       return;
