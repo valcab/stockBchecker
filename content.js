@@ -96,6 +96,7 @@
   btn.style.transition = 'background-color 120ms ease, transform 120ms ease, box-shadow 120ms ease';
   let isTracked = false;
   let isBusy = false;
+  let isAddedState = false;
 
   const applyTrackedStyle = (tracked) => {
     if (tracked) {
@@ -108,7 +109,11 @@
   };
 
   btn.onmouseenter = () => {
-    btn.style.background = isTracked ? 'hsl(0 84% 56%)' : 'hsl(270 60% 66%)';
+    if (isAddedState) {
+      btn.style.background = 'hsl(142 71% 41%)';
+    } else {
+      btn.style.background = isTracked ? 'hsl(0 84% 56%)' : 'hsl(270 60% 66%)';
+    }
     btn.style.transform = 'translateY(-1px)';
   };
   btn.onmouseleave = () => {
@@ -124,12 +129,16 @@
     if (state === 'added') {
       icon.innerHTML = '<path d="M20 6 9 17l-5-5"></path>';
       label.textContent = t('added');
+      btn.style.background = 'hsl(142 71% 45%)';
+      btn.style.color = 'hsl(0 0% 100%)';
+      isAddedState = true;
       return;
     }
 
     if (state === 'tracked') {
       icon.innerHTML = '<path d="M5 12h14"></path>';
       label.textContent = t('stop');
+      isAddedState = false;
       applyTrackedStyle(true);
       return;
     }
@@ -137,6 +146,7 @@
     if (state === 'removed') {
       icon.innerHTML = '<path d="M20 6 9 17l-5-5"></path>';
       label.textContent = t('stopped');
+      isAddedState = false;
       applyTrackedStyle(false);
       return;
     }
@@ -144,17 +154,20 @@
     if (state === 'loading') {
       icon.innerHTML = '<circle cx="12" cy="12" r="10"></circle><path d="M12 6v6"></path><path d="M12 18h.01"></path>';
       label.textContent = t('working');
+      isAddedState = false;
       return;
     }
 
     if (state === 'error') {
       icon.innerHTML = '<circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path>';
       label.textContent = t('error');
+      isAddedState = false;
       return;
     }
 
     icon.innerHTML = '<path d="M5 12h14"></path><path d="M12 5v14"></path>';
     label.textContent = t('title');
+    isAddedState = false;
     applyTrackedStyle(false);
   };
 

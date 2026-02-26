@@ -48,6 +48,8 @@ function App() {
   const [isChecking, setIsChecking] = useState(false)
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
   const [inputError, setInputError] = useState<string>('')
+  const [activeTab, setActiveTab] = useState('results')
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   
   const t = useMemo(() => getTranslations(language), [language])
 
@@ -74,6 +76,7 @@ function App() {
             const { result, name } = await checkStockB(item.url)
             const previousPrice = resultData?.price
             const previousBStockPrice = resultData?.bStockPrice
+            const previousImageUrl = resultData?.imageUrl
             newResults[item.id] = {
               ...result,
               priceChanged: !!(result.price && previousPrice && result.price !== previousPrice),
@@ -82,6 +85,7 @@ function App() {
                 previousBStockPrice &&
                 result.bStockPrice !== previousBStockPrice
               ),
+              imageUrl: result.imageUrl || previousImageUrl,
             }
             updated = true
             if (name && !item.name) {
@@ -141,11 +145,13 @@ function App() {
     saveResults(newResults)
 
     const { result, name } = await checkStockB(url)
+    const previousImageUrl = newResults[articleId]?.imageUrl
 
     newResults[articleId] = {
       ...result,
       priceChanged: false,
       bStockPriceChanged: false,
+      imageUrl: result.imageUrl || previousImageUrl,
     }
     saveResults(newResults)
 
@@ -242,6 +248,7 @@ function App() {
 
       const previousPrice = results[item.id]?.price
       const previousBStockPrice = results[item.id]?.bStockPrice
+      const previousImageUrl = results[item.id]?.imageUrl
 
       newResults[item.id] = {
         ...result,
@@ -251,6 +258,7 @@ function App() {
           previousBStockPrice &&
           result.bStockPrice !== previousBStockPrice
         ),
+        imageUrl: result.imageUrl || previousImageUrl,
       }
 
       saveResults(newResults)
@@ -369,7 +377,11 @@ function App() {
 
       {/* Tabs Section - Scrollable */}
       <div className="flex-1 overflow-hidden px-4 pt-3">
-        <Tabs defaultValue="results" className="h-full flex flex-col">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="h-full flex flex-col"
+        >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="results">
               <div className="flex items-center gap-1.5">
@@ -542,21 +554,64 @@ function App() {
                           </p>
                           </a>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleRemoveItemById(articleId)
-                          }}
-                          className={`ml-2 h-8 w-8 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200 ${
-                            data.status === 'available' 
-                              ? 'hover:bg-green-200 dark:hover:bg-green-800' 
-                              : ''
-                          }`}
+                        <Popover
+                          open={confirmDeleteId === articleId}
+                          onOpenChange={(open) => setConfirmDeleteId(open ? articleId : null)}
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setConfirmDeleteId(articleId)
+                              }}
+                              className={`ml-2 h-8 w-8 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200 ${
+                                data.status === 'available' 
+                                  ? 'hover:bg-green-200 dark:hover:bg-green-800' 
+                                  : ''
+                              }`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="w-64"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="space-y-3">
+                              <p className="text-sm font-medium">
+                                {t.deleteConfirmTitle || 'Remove this item?'}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {t.deleteConfirmDescription || 'This will remove the item from tracking and results.'}
+                              </p>
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="xs"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setConfirmDeleteId(null)
+                                  }}
+                                >
+                                  {t.cancelButton || 'Cancel'}
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="xs"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleRemoveItemById(articleId)
+                                    setConfirmDeleteId(null)
+                                  }}
+                                >
+                                  {t.confirmDeleteButton || 'Delete'}
+                                </Button>
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     </div>
                   </motion.div>
@@ -661,23 +716,25 @@ function App() {
       </div>
 
       {/* Sticky Bottom Button */}
-      <div className="border-t bg-background p-4">
-        <Button
-          onClick={handleCheckAll}
-          disabled={isChecking || items.length === 0}
-          className="w-full"
-          size="lg"
-        >
-          {isChecking ? (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              {t.checking}
-            </>
-          ) : (
-            t.checkAllButton
-          )}
-        </Button>
-      </div>
+      {activeTab === 'results' && (
+        <div className="border-t bg-background p-4">
+          <Button
+            onClick={handleCheckAll}
+            disabled={isChecking || items.length === 0}
+            className="w-full"
+            size="lg"
+          >
+            {isChecking ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                {t.checking}
+              </>
+            ) : (
+              t.checkAllButton
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

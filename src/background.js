@@ -213,6 +213,7 @@ async function performAutoCheck() {
         const data = await chrome.storage.local.get(['items', 'results', 'notificationsEnabled', 'lastResults']);
         const items = data.items || [];
         const previousResults = data.lastResults || {};
+        const currentResults = data.results || {};
         const notificationsEnabled = data.notificationsEnabled !== false;
         const results = {};
         
@@ -229,6 +230,7 @@ async function performAutoCheck() {
                 const name = extractName(html);
                 const previousPrice = previousResults[item.id]?.price;
                 const previousBStockPrice = previousResults[item.id]?.bStockPrice;
+                const previousImageUrl = currentResults[item.id]?.imageUrl || previousResults[item.id]?.imageUrl;
                 let bStockPrice = null;
                 let bStockUrl = null;
 
@@ -252,7 +254,8 @@ async function performAutoCheck() {
                     bStockPrice: bStockPrice || previousBStockPrice,
                     bStockPriceChanged: bStockPrice && previousBStockPrice && bStockPrice !== previousBStockPrice,
                     bStockUrl: bStockUrl || previousResults[item.id]?.bStockUrl,
-                    name: name || item.name
+                    name: name || item.name,
+                    imageUrl: previousImageUrl
                 };
                 
                 // Send a notification for every auto-check where B-Stock is available.
@@ -269,7 +272,8 @@ async function performAutoCheck() {
                     price: previousResults[item.id]?.price,
                     bStockPrice: previousResults[item.id]?.bStockPrice,
                     bStockUrl: previousResults[item.id]?.bStockUrl,
-                    name: item.name
+                    name: item.name,
+                    imageUrl: currentResults[item.id]?.imageUrl || previousResults[item.id]?.imageUrl
                 };
             }
         }

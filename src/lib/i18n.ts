@@ -33,6 +33,11 @@ export const translations = {
     checkIntervalLabel: 'Check every:',
     notificationsLabel: 'Show notifications when B-Stock found',
     clearAllButton: 'Clear All',
+    removeButton: 'Remove',
+    cancelButton: 'Cancel',
+    confirmDeleteButton: 'Delete',
+    deleteConfirmTitle: 'Remove this item?',
+    deleteConfirmDescription: 'This will remove the item from tracking and results.',
     languageLabel: 'Language',
     
     // Check button
@@ -96,6 +101,11 @@ export const translations = {
     checkIntervalLabel: 'Vérifier toutes les :',
     notificationsLabel: 'Afficher les notifications quand le Stock B est trouvé',
     clearAllButton: 'Tout effacer',
+    removeButton: 'Supprimer',
+    cancelButton: 'Annuler',
+    confirmDeleteButton: 'Supprimer',
+    deleteConfirmTitle: 'Supprimer cet article ?',
+    deleteConfirmDescription: 'Cela supprimera le suivi et le resultat associe.',
     languageLabel: 'Langue',
     
     // Check button
@@ -159,6 +169,11 @@ export const translations = {
     checkIntervalLabel: 'Prüfen alle:',
     notificationsLabel: 'Benachrichtigungen anzeigen, wenn B-Ware gefunden wird',
     clearAllButton: 'Alles löschen',
+    removeButton: 'Entfernen',
+    cancelButton: 'Abbrechen',
+    confirmDeleteButton: 'Loschen',
+    deleteConfirmTitle: 'Diesen Artikel entfernen?',
+    deleteConfirmDescription: 'Dadurch werden Tracking und Ergebnis entfernt.',
     languageLabel: 'Sprache',
     
     // Check button
