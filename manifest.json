@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Thomann Stock B Checker",
+  "name": "B-Stock Beacon",
   "version": "2.0.0",
   "description": "Check if Stock B items are available on Thomann pages",
   "permissions": ["activeTab", "scripting", "storage", "alarms", "notifications"],
@@ -16,7 +16,7 @@
   ],
   "action": {
     "default_popup": "index.html",
-    "default_title": "Thomann Stock B Checker"
+    "default_title": "B-Stock Beacon"
   },
   "content_scripts": [
     {

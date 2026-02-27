@@ -1,4 +1,4 @@
-# Thomann Stock B Checker
+# B-Stock Beacon
 
 A modern Chrome extension built with React and shadcn/ui to track and check Stock B availability on Thomann product pages.
 

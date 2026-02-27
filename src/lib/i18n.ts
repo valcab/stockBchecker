@@ -3,7 +3,7 @@ export type Language = 'en' | 'fr' | 'de'
 export const translations = {
   en: {
     // Header
-    title: 'Stock B Checker',
+    title: 'B-Stock Beacon',
     
     // Add item
     inputPlaceholder: 'Enter URL or ID',
@@ -71,7 +71,7 @@ export const translations = {
   },
   fr: {
     // Header
-    title: 'Vérificateur Stock B',
+    title: 'B-Stock Beacon',
     
     // Add item
     inputPlaceholder: 'Entrez URL ou ID',
@@ -139,7 +139,7 @@ export const translations = {
   },
   de: {
     // Header
-    title: 'Stock B Prüfer',
+    title: 'B-Stock Beacon',
     
     // Add item
     inputPlaceholder: 'URL oder ID eingeben',
