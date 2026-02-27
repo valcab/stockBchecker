@@ -13,9 +13,9 @@
     },
     fr: {
       title: 'Suivre Stock B',
-      added: 'Ajoute',
+      added: 'Ajouté',
       stop: 'Arreter le suivi',
-      stopped: 'Suivi arrete',
+      stopped: 'Suivi arreté',
       working: 'Traitement...',
       error: 'Erreur',
     },

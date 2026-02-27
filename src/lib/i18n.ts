@@ -74,7 +74,7 @@ export const translations = {
     title: 'B-Stock Beacon',
     
     // Add item
-    inputPlaceholder: 'Entrez URL ou ID',
+    inputPlaceholder: 'Entrez une URL thomann',
     addButton: 'Ajouter',
     
     // Tabs
