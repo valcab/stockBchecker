@@ -1,6 +1,54 @@
 export type Language = 'en' | 'fr' | 'de'
 
-export const translations = {
+export interface TranslationSet {
+  title: string
+  inputPlaceholder: string
+  addButton: string
+  tabResults: string
+  tabItems: string
+  tabSettings: string
+  noResults: string
+  available: string
+  unavailable: string
+  checking: string
+  checkedAt: string
+  noItems: string
+  selectAll: string
+  deselectAll: string
+  selected: string
+  settingsTitle: string
+  autoCheckLabel: string
+  checkIntervalLabel: string
+  notificationsLabel: string
+  clearAllButton: string
+  removeButton: string
+  cancelButton: string
+  confirmDeleteButton: string
+  deleteConfirmTitle: string
+  deleteConfirmDescription: string
+  languageLabel: string
+  checkAllButton: string
+  interval1min: string
+  interval5min: string
+  interval15min: string
+  interval30min: string
+  interval1hour: string
+  interval2hours: string
+  interval6hours: string
+  alertEnterUrl: string
+  alertInvalidUrl: string
+  alertAlreadyTracked: string
+  alertNoItems: string
+  alertClearConfirm: string
+  article: string
+  aboutTitle: string
+  aboutDescription: string
+  madeBy: string
+  website: string
+  linkedin: string
+}
+
+export const translations: Record<Language, TranslationSet> = {
   en: {
     // Header
     title: 'B-Stock Beacon',
