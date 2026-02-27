@@ -13,19 +13,34 @@ chrome.runtime.onInstalled.addListener(() => {
         if (result.autoCheckEnabled) {
             setupAutoCheck(result.checkInterval || 30);
         }
+        updateBadge(result.results || {});
     });
 });
 
 chrome.runtime.onStartup.addListener(() => {
-    chrome.storage.local.get(['autoCheckEnabled', 'checkInterval'], (result) => {
+    chrome.storage.local.get(['autoCheckEnabled', 'checkInterval', 'results'], (result) => {
         if (result.autoCheckEnabled) {
             setupAutoCheck(result.checkInterval || 30);
         }
+        updateBadge(result.results || {});
     });
+});
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'local') return;
+    if (!changes.results) return;
+    updateBadge(changes.results.newValue || {});
 });
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.type === 'STOCKB_OPEN_POPUP') {
+        openExtensionPopup(request.itemId)
+            .then(result => sendResponse({ success: true, ...result }))
+            .catch(error => sendResponse({ success: false, error: error.message }));
+        return true;
+    }
+
     if (request.type === 'STOCKB_NOTIFY_AVAILABLE') {
         sendBStockNotification(request.displayName)
             .then(result => sendResponse({ success: true, ...result }))
@@ -161,6 +176,8 @@ async function handleQuickRemoveItem(url) {
         results: updatedResults,
     });
 
+    updateBadge(updatedResults);
+
     return {
         removed: true,
         removedIds: removedItems.map(item => item.id),
@@ -182,6 +199,19 @@ async function sendBStockNotification(displayName) {
     });
 
     return { sent: true };
+}
+
+async function openExtensionPopup(itemId) {
+    await chrome.storage.local.set({
+        pendingFocusItemId: itemId || null,
+    });
+
+    if (chrome.action?.openPopup) {
+        await chrome.action.openPopup();
+        return { opened: true };
+    }
+
+    return { opened: false, reason: 'openPopup-not-supported' };
 }
 
 // Listen for alarms

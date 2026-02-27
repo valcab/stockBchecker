@@ -26,6 +26,16 @@ export interface TranslationSet {
   confirmDeleteButton: string
   deleteConfirmTitle: string
   deleteConfirmDescription: string
+  bStockLink: string
+  onboardingButton: string
+  onboardingSkip: string
+  onboardingNext: string
+  onboardingDone: string
+  onboardingTitle: string
+  onboardingStep1Title: string
+  onboardingStep1Description: string
+  onboardingStep2Title: string
+  onboardingStep2Description: string
   languageLabel: string
   checkAllButton: string
   interval1min: string
@@ -86,6 +96,16 @@ export const translations: Record<Language, TranslationSet> = {
     confirmDeleteButton: 'Delete',
     deleteConfirmTitle: 'Remove this item?',
     deleteConfirmDescription: 'This will remove the item from tracking and results.',
+    bStockLink: 'B-Stock',
+    onboardingButton: 'Show quick intro',
+    onboardingSkip: 'Skip',
+    onboardingNext: 'Next',
+    onboardingDone: 'Done',
+    onboardingTitle: 'Quick Start',
+    onboardingStep1Title: 'Track from product pages',
+    onboardingStep1Description: 'Open a Thomann product page and use the floating button to start or stop tracking instantly.',
+    onboardingStep2Title: 'Enable auto-check and notifications',
+    onboardingStep2Description: 'Turn on automatic checks in Settings and keep notifications enabled so new B-Stock is surfaced quickly.',
     languageLabel: 'Language',
     
     // Check button
@@ -154,6 +174,16 @@ export const translations: Record<Language, TranslationSet> = {
     confirmDeleteButton: 'Supprimer',
     deleteConfirmTitle: 'Supprimer cet article ?',
     deleteConfirmDescription: 'Cela supprimera le suivi et le resultat associe.',
+    bStockLink: 'B-Stock',
+    onboardingButton: 'Afficher l intro',
+    onboardingSkip: 'Passer',
+    onboardingNext: 'Suivant',
+    onboardingDone: 'Termine',
+    onboardingTitle: 'Demarrage rapide',
+    onboardingStep1Title: 'Suivre depuis la page produit',
+    onboardingStep1Description: 'Ouvrez une page produit Thomann et utilisez le bouton flottant pour demarrer ou arreter le suivi.',
+    onboardingStep2Title: 'Activer auto-check et notifications',
+    onboardingStep2Description: 'Activez les verifications automatiques dans Parametres et gardez les notifications pour etre alerte rapidement.',
     languageLabel: 'Langue',
     
     // Check button
@@ -222,6 +252,16 @@ export const translations: Record<Language, TranslationSet> = {
     confirmDeleteButton: 'Loschen',
     deleteConfirmTitle: 'Diesen Artikel entfernen?',
     deleteConfirmDescription: 'Dadurch werden Tracking und Ergebnis entfernt.',
+    bStockLink: 'B-Stock',
+    onboardingButton: 'Kurze Einfuhrung',
+    onboardingSkip: 'Uberspringen',
+    onboardingNext: 'Weiter',
+    onboardingDone: 'Fertig',
+    onboardingTitle: 'Schnellstart',
+    onboardingStep1Title: 'Auf Produktseiten verfolgen',
+    onboardingStep1Description: 'Offnen Sie eine Thomann-Produktseite und nutzen Sie den schwebenden Button, um Tracking sofort zu starten oder zu stoppen.',
+    onboardingStep2Title: 'Auto-Check und Benachrichtigungen aktivieren',
+    onboardingStep2Description: 'Aktivieren Sie automatische Prufungen in den Einstellungen und lassen Sie Benachrichtigungen an.',
     languageLabel: 'Sprache',
     
     // Check button
