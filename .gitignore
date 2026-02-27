@@ -1,0 +1,14 @@
+node_modules
+dist
+.DS_Store
+*.log
+.env
+.vscode
+.idea
+
+# Backup files
+*.bak
+
+# Build artifacts
+build
+coverage

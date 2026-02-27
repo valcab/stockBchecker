@@ -16,8 +16,44 @@ chrome.runtime.onInstalled.addListener(() => {
     });
 });
 
+chrome.runtime.onStartup.addListener(() => {
+    chrome.storage.local.get(['autoCheckEnabled', 'checkInterval'], (result) => {
+        if (result.autoCheckEnabled) {
+            setupAutoCheck(result.checkInterval || 30);
+        }
+    });
+});
+
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.type === 'STOCKB_NOTIFY_AVAILABLE') {
+        sendBStockNotification(request.displayName)
+            .then(result => sendResponse({ success: true, ...result }))
+            .catch(error => sendResponse({ success: false, error: error.message }));
+        return true;
+    }
+
+    if (request.type === 'STOCKB_IS_TRACKED') {
+        isItemTracked(request.url)
+            .then(result => sendResponse({ success: true, ...result }))
+            .catch(error => sendResponse({ success: false, error: error.message }));
+        return true;
+    }
+
+    if (request.type === 'STOCKB_ADD_ITEM') {
+        handleQuickAddItem(request.url)
+            .then(result => sendResponse({ success: true, ...result }))
+            .catch(error => sendResponse({ success: false, error: error.message }));
+        return true;
+    }
+
+    if (request.type === 'STOCKB_REMOVE_ITEM') {
+        handleQuickRemoveItem(request.url)
+            .then(result => sendResponse({ success: true, ...result }))
+            .catch(error => sendResponse({ success: false, error: error.message }));
+        return true;
+    }
+
     if (request.type === 'CHECK_STOCK') {
         // Handle stock check requests
         handleStockCheck(request.articleId, request.url)
@@ -37,6 +73,116 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 });
+
+function extractArticleIdFromUrl(input) {
+    const normalized = input.trim();
+
+    let match = normalized.match(/[/_]product[_-]?(\d+)/i);
+    if (match) return match[1];
+
+    match = normalized.match(/\/(\d+)\.html?/i);
+    if (match) return match[1];
+
+    match = normalized.match(/\/p(\d+)\//i);
+    if (match) return match[1];
+
+    match = normalized.match(/(\d{5,})/);
+    if (match) return match[1];
+
+    return normalized;
+}
+
+async function handleQuickAddItem(url) {
+    if (!url || typeof url !== 'string') {
+        throw new Error('Missing item URL');
+    }
+
+    const itemId = extractArticleIdFromUrl(url);
+    const data = await chrome.storage.local.get(['items']);
+    const items = data.items || [];
+
+    const alreadyTracked = items.some(item => item.id === itemId || item.url === url);
+    if (alreadyTracked) {
+        return { added: false, reason: 'already-tracked' };
+    }
+
+    const newItem = {
+        id: itemId,
+        url,
+        name: null,
+        addedAt: new Date().toISOString(),
+    };
+
+    await chrome.storage.local.set({ items: [...items, newItem] });
+
+    return { added: true, item: newItem };
+}
+
+async function isItemTracked(url) {
+    if (!url || typeof url !== 'string') {
+        throw new Error('Missing item URL');
+    }
+
+    const itemId = extractArticleIdFromUrl(url);
+    const data = await chrome.storage.local.get(['items']);
+    const items = data.items || [];
+
+    const trackedItem = items.find(item => item.id === itemId || item.url === url);
+    return {
+        tracked: !!trackedItem,
+        item: trackedItem || null,
+    };
+}
+
+async function handleQuickRemoveItem(url) {
+    if (!url || typeof url !== 'string') {
+        throw new Error('Missing item URL');
+    }
+
+    const itemId = extractArticleIdFromUrl(url);
+    const data = await chrome.storage.local.get(['items', 'results']);
+    const items = data.items || [];
+    const results = data.results || {};
+
+    const removedItems = items.filter(item => item.id === itemId || item.url === url);
+    if (removedItems.length === 0) {
+        return { removed: false, reason: 'not-tracked' };
+    }
+
+    const updatedItems = items.filter(item => item.id !== itemId && item.url !== url);
+    const updatedResults = { ...results };
+    for (const removedItem of removedItems) {
+        delete updatedResults[removedItem.id];
+        delete updatedResults[removedItem.url];
+    }
+
+    await chrome.storage.local.set({
+        items: updatedItems,
+        results: updatedResults,
+    });
+
+    return {
+        removed: true,
+        removedIds: removedItems.map(item => item.id),
+    };
+}
+
+async function sendBStockNotification(displayName) {
+    const data = await chrome.storage.local.get(['notificationsEnabled']);
+    if (data.notificationsEnabled === false) {
+        return { sent: false, reason: 'disabled' };
+    }
+
+    await chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon-128.png',
+        title: 'B-Stock Available!',
+        message: `B-Stock is available for ${displayName || 'a tracked item'}`,
+        priority: 2,
+    });
+
+    return { sent: true };
+}
 
 // Listen for alarms
 chrome.alarms.onAlarm.addListener((alarm) => {
@@ -67,6 +213,7 @@ async function performAutoCheck() {
         const data = await chrome.storage.local.get(['items', 'results', 'notificationsEnabled', 'lastResults']);
         const items = data.items || [];
         const previousResults = data.lastResults || {};
+        const currentResults = data.results || {};
         const notificationsEnabled = data.notificationsEnabled !== false;
         const results = {};
         
@@ -83,6 +230,7 @@ async function performAutoCheck() {
                 const name = extractName(html);
                 const previousPrice = previousResults[item.id]?.price;
                 const previousBStockPrice = previousResults[item.id]?.bStockPrice;
+                const previousImageUrl = currentResults[item.id]?.imageUrl || previousResults[item.id]?.imageUrl;
                 let bStockPrice = null;
                 let bStockUrl = null;
 
@@ -106,19 +254,14 @@ async function performAutoCheck() {
                     bStockPrice: bStockPrice || previousBStockPrice,
                     bStockPriceChanged: bStockPrice && previousBStockPrice && bStockPrice !== previousBStockPrice,
                     bStockUrl: bStockUrl || previousResults[item.id]?.bStockUrl,
-                    name: name || item.name
+                    name: name || item.name,
+                    imageUrl: previousImageUrl
                 };
                 
-                // Send notification if B-Stock became available
-                if (notificationsEnabled && isAvailable && previousResults[item.id]?.status !== 'available') {
+                // Send a notification for every auto-check where B-Stock is available.
+                if (notificationsEnabled && isAvailable) {
                     console.log('Sending notification for', name || item.id);
-                    chrome.notifications.create({
-                        type: 'basic',
-                        iconUrl: 'icons/icon-128.png',
-                        title: 'B-Stock Available!',
-                        message: `B-Stock is now available for ${name || `article #${item.id}`}`,
-                        priority: 2
-                    });
+                    await sendBStockNotification(name || `article #${item.id}`);
                 }
             } catch (error) {
                 console.error('Error checking item:', error);
@@ -129,7 +272,8 @@ async function performAutoCheck() {
                     price: previousResults[item.id]?.price,
                     bStockPrice: previousResults[item.id]?.bStockPrice,
                     bStockUrl: previousResults[item.id]?.bStockUrl,
-                    name: item.name
+                    name: item.name,
+                    imageUrl: currentResults[item.id]?.imageUrl || previousResults[item.id]?.imageUrl
                 };
             }
         }
