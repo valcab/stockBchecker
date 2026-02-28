@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { PackageCheck, Trash2, RefreshCw, Plus, Info } from 'lucide-react'
+import { PackageCheck, Trash2, RefreshCw, Plus, Info, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -50,6 +50,8 @@ function App() {
   const [inputError, setInputError] = useState<string>('')
   const [activeTab, setActiveTab] = useState('results')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [onboardingStep, setOnboardingStep] = useState(0)
   
   const t = useMemo(() => getTranslations(language), [language])
 
@@ -60,6 +62,15 @@ function App() {
       displayName,
     })
   }
+
+  useEffect(() => {
+    chrome.storage.local.get(['onboardingCompleted'], (storage) => {
+      if (storage.onboardingCompleted !== true) {
+        setShowOnboarding(true)
+        setOnboardingStep(0)
+      }
+    })
+  }, [])
 
   // Check all items on mount
   useEffect(() => {
@@ -286,6 +297,31 @@ function App() {
     }
   }
 
+  const getBStockLink = (url?: string) => {
+    if (!url) return null
+    if (/_b_stock\.htm(?:$|[?#])/i.test(url)) return url
+
+    try {
+      const parsed = new URL(url)
+      parsed.pathname = parsed.pathname.replace(/\.htm$/i, '_b_stock.htm')
+      return parsed.toString()
+    } catch {
+      return url.replace(/\.htm$/i, '_b_stock.htm')
+    }
+  }
+
+  const finishOnboarding = () => {
+    setShowOnboarding(false)
+    setOnboardingStep(0)
+    chrome.storage.local.set({ onboardingCompleted: true })
+  }
+
+  const launchOnboarding = () => {
+    setActiveTab('settings')
+    setShowOnboarding(true)
+    setOnboardingStep(0)
+  }
+
   const sortedResults = Object.entries(results).sort((a, b) => {
     if (a[1].status === 'available' && b[1].status !== 'available') return -1
     if (a[1].status !== 'available' && b[1].status === 'available') return 1
@@ -404,7 +440,7 @@ function App() {
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between p-2 rounded-md border bg-muted/50">
+                <div className="sticky top-0 z-10 flex items-center justify-between p-2 rounded-md border bg-background/95 backdrop-blur">
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="select-all-results"
@@ -553,6 +589,18 @@ function App() {
                             {t.checkedAt} {date}
                           </p>
                           </a>
+                          {data.status === 'available' && (
+                            <a
+                              href={data.bStockUrl || getBStockLink(item?.url) || '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-2 inline-flex items-center rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground shadow-sm transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <span>{t.bStockLink}</span>
+                              <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                            </a>
+                          )}
                         </div>
                         <Popover
                           open={confirmDeleteId === articleId}
@@ -709,6 +757,18 @@ function App() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm">Guide</Label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={launchOnboarding}
+                  >
+                    {t.onboardingButton}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -735,6 +795,69 @@ function App() {
           </Button>
         </div>
       )}
+
+      <AnimatePresence>
+        {showOnboarding && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.98 }}
+              className="w-full rounded-2xl border bg-background p-5 shadow-2xl"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+                    {t.onboardingTitle}
+                  </p>
+                  <h2 className="mt-1 text-lg font-semibold">
+                    {onboardingStep === 0 ? t.onboardingStep1Title : t.onboardingStep2Title}
+                  </h2>
+                </div>
+                <span className="rounded-full bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                  {onboardingStep + 1}/2
+                </span>
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-2xl border bg-gradient-to-br from-blue-50 via-white to-sky-100 p-4">
+                  <div className="mb-3 flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                      {onboardingStep === 0 ? <Plus className="h-5 w-5" /> : <RefreshCw className="h-5 w-5" />}
+                    </div>
+                    <p className="text-sm font-semibold">
+                      {onboardingStep === 0 ? t.onboardingStep1Title : t.onboardingStep2Title}
+                    </p>
+                  </div>
+                  <p className="text-sm leading-6 text-slate-700">
+                    {onboardingStep === 0 ? t.onboardingStep1Description : t.onboardingStep2Description}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Button variant="ghost" size="sm" onClick={finishOnboarding}>
+                    {t.onboardingSkip}
+                  </Button>
+                  {onboardingStep === 0 ? (
+                    <Button size="sm" onClick={() => setOnboardingStep(1)}>
+                      {t.onboardingNext}
+                    </Button>
+                  ) : (
+                    <Button size="sm" onClick={finishOnboarding}>
+                      {t.onboardingDone}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
