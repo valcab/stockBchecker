@@ -79,6 +79,7 @@ function App() {
   const [settingsNotice, setSettingsNotice] = useState<string>('')
   const [systemPrefersDark, setSystemPrefersDark] = useState(false)
   const importInputRef = useRef<HTMLInputElement | null>(null)
+  const hasAutoCheckedOnOpenRef = useRef(false)
   
   const t = useMemo(() => getTranslations(language), [language])
   const resolvedTheme = themeMode === 'system'
@@ -128,47 +129,76 @@ function App() {
     root.style.colorScheme = isDark ? 'dark' : 'light'
   }, [resolvedTheme])
 
-  // Check all items on mount
-  useEffect(() => {
-    if (items.length > 0) {
-      (async () => {
-        setIsChecking(true)
-        const newResults = { ...results }
-        let updated = false
-        for (let i = 0; i < items.length; i++) {
-          const item = items[i]
-          const resultData = results[item.id]
-          // Only check if result is missing or imageUrl is not present
-          if (!resultData || !resultData.imageUrl) {
-            const { result, name } = await checkStockB(item.url)
-            const previousPrice = resultData?.price
-            const previousBStockPrice = resultData?.bStockPrice
-            const previousImageUrl = resultData?.imageUrl
-            newResults[item.id] = {
-              ...result,
-              priceChanged: !!(result.price && previousPrice && result.price !== previousPrice),
-              bStockPriceChanged: !!(
-                result.bStockPrice &&
-                previousBStockPrice &&
-                result.bStockPrice !== previousBStockPrice
-              ),
-              imageUrl: result.imageUrl || previousImageUrl,
-            }
-            updated = true
-            if (name && !item.name) {
-              const updatedItems = [...items]
-              updatedItems[i] = { ...item, name }
-              saveItems(updatedItems)
-            }
-          }
+  const runCheckForItems = async (itemsToCheck: TrackedItem[], currentResults = results) => {
+    if (itemsToCheck.length === 0) return
+
+    setIsChecking(true)
+
+    const newResults = { ...currentResults }
+    itemsToCheck.forEach((item) => {
+      newResults[item.id] = {
+        status: 'checking',
+        timestamp: new Date().toISOString(),
+      }
+    })
+    saveResults(newResults)
+
+    const updatedItems = [...items]
+    let itemsChanged = false
+
+    for (let i = 0; i < itemsToCheck.length; i++) {
+      const item = itemsToCheck[i]
+      if (i > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      }
+
+      const { result, name } = await checkStockB(item.url)
+      const previousResult = currentResults[item.id]
+
+      newResults[item.id] = {
+        ...result,
+        priceChanged: !!(result.price && previousResult?.price && result.price !== previousResult.price),
+        bStockPriceChanged: !!(
+          result.bStockPrice &&
+          previousResult?.bStockPrice &&
+          result.bStockPrice !== previousResult.bStockPrice
+        ),
+        imageUrl: result.imageUrl || previousResult?.imageUrl,
+      }
+
+      saveResults(newResults)
+
+      if (
+        result.status === 'available' &&
+        previousResult?.status !== 'available'
+      ) {
+        notifyBStockDetected(item.id, name || item.name || `${t.article} #${item.id}`)
+      }
+
+      if (name && !item.name) {
+        const itemIndex = updatedItems.findIndex((trackedItem) => trackedItem.id === item.id)
+        if (itemIndex !== -1) {
+          updatedItems[itemIndex] = { ...updatedItems[itemIndex], name }
+          itemsChanged = true
         }
-        if (updated) {
-          saveResults(newResults)
-        }
-        setIsChecking(false)
-      })()
+      }
     }
-  }, [items])
+
+    if (itemsChanged) {
+      saveItems(updatedItems)
+    }
+
+    setIsChecking(false)
+  }
+
+  // Check all items once when the popup opens
+  useEffect(() => {
+    if (hasAutoCheckedOnOpenRef.current) return
+    if (items.length === 0) return
+
+    hasAutoCheckedOnOpenRef.current = true
+    void runCheckForItems(items, results)
+  }, [items, results])
 
   const handleAddItem = async () => {
     if (!input.trim()) {
@@ -307,58 +337,7 @@ function App() {
       alert(t.alertNoItems)
       return
     }
-
-    setIsChecking(true)
-
-    const newResults = { ...results }
-    items.forEach((item) => {
-      newResults[item.id] = {
-        status: 'checking',
-        timestamp: new Date().toISOString(),
-      }
-    })
-    saveResults(newResults)
-
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]
-      if (i > 0) {
-        await new Promise((resolve) => setTimeout(resolve, 500))
-      }
-
-      const { result, name } = await checkStockB(item.url)
-
-      const previousPrice = results[item.id]?.price
-      const previousBStockPrice = results[item.id]?.bStockPrice
-      const previousImageUrl = results[item.id]?.imageUrl
-
-      newResults[item.id] = {
-        ...result,
-        priceChanged: !!(result.price && previousPrice && result.price !== previousPrice),
-        bStockPriceChanged: !!(
-          result.bStockPrice &&
-          previousBStockPrice &&
-          result.bStockPrice !== previousBStockPrice
-        ),
-        imageUrl: result.imageUrl || previousImageUrl,
-      }
-
-      saveResults(newResults)
-
-      if (
-        result.status === 'available' &&
-        results[item.id]?.status !== 'available'
-      ) {
-        notifyBStockDetected(item.id, name || item.name || `${t.article} #${item.id}`)
-      }
-
-      if (name && !item.name) {
-        const updatedItems = [...items]
-        updatedItems[i] = { ...item, name }
-        saveItems(updatedItems)
-      }
-    }
-
-    setIsChecking(false)
+    await runCheckForItems(items, results)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -591,7 +570,7 @@ function App() {
       {/* Header */}
       <div className="flex items-center justify-between p-4 pb-3 border-b">
         <div className="flex items-center gap-2">
-          <img src="icons/icon-128.png" alt="" className="h-7 w-7 rounded-xl" />
+          <img src="icons/icon-128.png" alt="" className="h-7 w-7" />
           <h1 className="text-xl font-bold">{t.title}</h1>
         </div>
         <Popover>
@@ -1053,7 +1032,8 @@ function App() {
                                 e.stopPropagation()
                                 setConfirmDeleteId(articleId)
                               }}
-                              className={`ml-2 h-8 w-8 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200 ${
+                              aria-label={t.removeButton || 'Remove'}
+                              className={`ml-2 h-8 w-8 flex-shrink-0 opacity-0 transition-all duration-200 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 ${
                                 data.status === 'available' 
                                   ? 'hover:bg-green-200 dark:hover:bg-green-800' 
                                   : ''
