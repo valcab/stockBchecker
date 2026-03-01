@@ -1,5 +1,7 @@
 import type { Language } from './lib/i18n'
 
+export type ThemeMode = 'system' | 'light' | 'dark'
+
 export interface TrackedItem {
   id: string
   url: string
@@ -25,5 +27,8 @@ export interface StorageData {
   autoCheckEnabled: boolean
   checkInterval: number
   notificationsEnabled: boolean
+  lastAutoCheckAt?: string | null
+  nextAutoCheckAt?: string | null
   language: Language
+  themeMode?: ThemeMode
 }

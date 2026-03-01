@@ -1,33 +1,50 @@
 // Background service worker for Stock B Checker extension
 
+const AUTO_CHECK_ALARM = 'autoCheckAlarm';
+const NOTIFICATION_COOLDOWN_MS = 60 * 60 * 1000;
+
 chrome.runtime.onInstalled.addListener(() => {
     // Initialize storage
-    chrome.storage.local.get(['items', 'results', 'autoCheckEnabled', 'checkInterval'], (result) => {
+    chrome.storage.local.get(
+        ['items', 'results', 'autoCheckEnabled', 'checkInterval', 'nextAutoCheckAt', 'lastAutoCheckAt'],
+        (result) => {
         if (!result.items) {
             chrome.storage.local.set({ items: [] });
         }
         if (!result.results) {
             chrome.storage.local.set({ results: {} });
         }
+        if (typeof result.nextAutoCheckAt === 'undefined') {
+            chrome.storage.local.set({ nextAutoCheckAt: null });
+        }
+        if (typeof result.lastAutoCheckAt === 'undefined') {
+            chrome.storage.local.set({ lastAutoCheckAt: null });
+        }
         // Set up alarm if auto-check is enabled
         if (result.autoCheckEnabled) {
             setupAutoCheck(result.checkInterval || 30);
+        } else {
+            chrome.storage.local.set({ nextAutoCheckAt: null });
         }
     });
+    restoreBadgeFromStorage();
 });
 
 chrome.runtime.onStartup.addListener(() => {
     chrome.storage.local.get(['autoCheckEnabled', 'checkInterval'], (result) => {
         if (result.autoCheckEnabled) {
             setupAutoCheck(result.checkInterval || 30);
+        } else {
+            chrome.storage.local.set({ nextAutoCheckAt: null });
         }
     });
+    restoreBadgeFromStorage();
 });
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === 'STOCKB_NOTIFY_AVAILABLE') {
-        sendBStockNotification(request.displayName)
+        sendBStockNotification(request.displayName, request.itemId, { force: request.force === true })
             .then(result => sendResponse({ success: true, ...result }))
             .catch(error => sendResponse({ success: false, error: error.message }));
         return true;
@@ -67,7 +84,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (request.enabled) {
             setupAutoCheck(request.interval);
         } else {
-            chrome.alarms.clear('autoCheckAlarm');
+            disableAutoCheck();
         }
         sendResponse({ success: true });
         return true;
@@ -167,10 +184,19 @@ async function handleQuickRemoveItem(url) {
     };
 }
 
-async function sendBStockNotification(displayName) {
-    const data = await chrome.storage.local.get(['notificationsEnabled']);
+async function sendBStockNotification(displayName, itemId, options = {}) {
+    const force = options.force === true;
+    const data = await chrome.storage.local.get(['notificationsEnabled', 'lastNotificationSentAtByItem']);
     if (data.notificationsEnabled === false) {
         return { sent: false, reason: 'disabled' };
+    }
+
+    const lastNotificationSentAtByItem = data.lastNotificationSentAtByItem || {};
+    const now = Date.now();
+    const lastSentAt = itemId ? lastNotificationSentAtByItem[itemId] : null;
+
+    if (!force && itemId && lastSentAt && now - lastSentAt < NOTIFICATION_COOLDOWN_MS) {
+        return { sent: false, reason: 'cooldown' };
     }
 
     await chrome.notifications.create({
@@ -181,14 +207,24 @@ async function sendBStockNotification(displayName) {
         priority: 2,
     });
 
+    if (itemId) {
+        await chrome.storage.local.set({
+            lastNotificationSentAtByItem: {
+                ...lastNotificationSentAtByItem,
+                [itemId]: now,
+            },
+        });
+    }
+
     return { sent: true };
 }
 
 // Listen for alarms
 chrome.alarms.onAlarm.addListener((alarm) => {
     console.log('Alarm triggered:', alarm.name);
-    if (alarm.name === 'autoCheckAlarm') {
+    if (alarm.name === AUTO_CHECK_ALARM) {
         console.log('Running auto-check...');
+        syncNextAutoCheckAt();
         performAutoCheck();
     }
 });
@@ -196,21 +232,49 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 function setupAutoCheck(intervalMinutes) {
     console.log('Setting up auto-check with interval:', intervalMinutes, 'minutes');
     // Clear existing alarm
-    chrome.alarms.clear('autoCheckAlarm', () => {
+    chrome.alarms.clear(AUTO_CHECK_ALARM, () => {
         // Create new alarm that runs immediately and then periodically
-        chrome.alarms.create('autoCheckAlarm', {
+        chrome.alarms.create(AUTO_CHECK_ALARM, {
             delayInMinutes: 0.1, // Run almost immediately (6 seconds)
             periodInMinutes: intervalMinutes
         });
         console.log('Auto-check alarm created');
+        syncNextAutoCheckAt();
     });
+}
+
+function disableAutoCheck() {
+    chrome.alarms.clear(AUTO_CHECK_ALARM, () => {
+        chrome.storage.local.set({ nextAutoCheckAt: null });
+    });
+}
+
+function syncNextAutoCheckAt() {
+    chrome.alarms.get(AUTO_CHECK_ALARM, (alarm) => {
+        chrome.storage.local.set({
+            nextAutoCheckAt: alarm?.scheduledTime
+                ? new Date(alarm.scheduledTime).toISOString()
+                : null,
+        });
+    });
+}
+
+async function restoreBadgeFromStorage() {
+    const data = await chrome.storage.local.get(['results']);
+    updateBadge(data.results || {});
 }
 
 async function performAutoCheck() {
     console.log('performAutoCheck started');
     try {
         // Get all items and settings
-        const data = await chrome.storage.local.get(['items', 'results', 'notificationsEnabled', 'lastResults']);
+        const data = await chrome.storage.local.get([
+            'items',
+            'results',
+            'notificationsEnabled',
+            'lastResults',
+            'checkInterval',
+        ]);
         const items = data.items || [];
         const previousResults = data.lastResults || {};
         const currentResults = data.results || {};
@@ -261,7 +325,11 @@ async function performAutoCheck() {
                 // Send a notification for every auto-check where B-Stock is available.
                 if (notificationsEnabled && isAvailable) {
                     console.log('Sending notification for', name || item.id);
-                    await sendBStockNotification(name || `article #${item.id}`);
+                    await sendBStockNotification(
+                        name || `article #${item.id}`,
+                        item.id,
+                        { force: previousResults[item.id]?.status !== 'available' }
+                    );
                 }
             } catch (error) {
                 console.error('Error checking item:', error);
@@ -279,16 +347,21 @@ async function performAutoCheck() {
         }
         
         // Save results
-        chrome.storage.local.set({ 
+        const completedAt = new Date().toISOString();
+
+        chrome.storage.local.set({
             results,
-            lastResults: results
+            lastResults: results,
+            lastAutoCheckAt: completedAt,
         });
         
         // Update badge if any B-Stock is available
         updateBadge(results);
+        syncNextAutoCheckAt();
         
     } catch (error) {
         console.error('Auto-check error:', error);
+        syncNextAutoCheckAt();
     }
 }
 

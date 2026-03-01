@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import type { TrackedItem, CheckResult } from '@/types'
+import type { TrackedItem, CheckResult, ThemeMode } from '@/types'
 import type { Language } from '@/lib/i18n'
 import { getBrowserLanguage } from '@/lib/i18n'
 
@@ -9,7 +9,10 @@ export function useStorage() {
   const [autoCheckEnabled, setAutoCheckEnabled] = useState(false)
   const [checkInterval, setCheckInterval] = useState(30)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
+  const [lastAutoCheckAt, setLastAutoCheckAt] = useState<string | null>(null)
+  const [nextAutoCheckAt, setNextAutoCheckAt] = useState<string | null>(null)
   const [language, setLanguage] = useState<Language>('en')
+  const [themeMode, setThemeMode] = useState<ThemeMode>('system')
 
   useEffect(() => {
     loadFromStorage()
@@ -35,8 +38,17 @@ export function useStorage() {
       if (changes.notificationsEnabled) {
         setNotificationsEnabled(changes.notificationsEnabled.newValue !== false)
       }
+      if (changes.lastAutoCheckAt) {
+        setLastAutoCheckAt((changes.lastAutoCheckAt.newValue as string | null) || null)
+      }
+      if (changes.nextAutoCheckAt) {
+        setNextAutoCheckAt((changes.nextAutoCheckAt.newValue as string | null) || null)
+      }
       if (changes.language) {
         setLanguage((changes.language.newValue as Language) || getBrowserLanguage())
+      }
+      if (changes.themeMode) {
+        setThemeMode((changes.themeMode.newValue as ThemeMode) || 'system')
       }
     }
 
@@ -48,14 +60,27 @@ export function useStorage() {
 
   const loadFromStorage = () => {
     chrome.storage.local.get(
-      ['items', 'results', 'autoCheckEnabled', 'checkInterval', 'notificationsEnabled', 'language'],
+      [
+        'items',
+        'results',
+        'autoCheckEnabled',
+        'checkInterval',
+        'notificationsEnabled',
+        'lastAutoCheckAt',
+        'nextAutoCheckAt',
+        'language',
+        'themeMode',
+      ],
       (result) => {
         setItems(result.items || [])
         setResults(result.results || {})
         setAutoCheckEnabled(result.autoCheckEnabled || false)
         setCheckInterval(result.checkInterval || 30)
         setNotificationsEnabled(result.notificationsEnabled !== false)
+        setLastAutoCheckAt(result.lastAutoCheckAt || null)
+        setNextAutoCheckAt(result.nextAutoCheckAt || null)
         setLanguage(result.language || getBrowserLanguage())
+        setThemeMode(result.themeMode || 'system')
       }
     )
   }
@@ -117,17 +142,27 @@ export function useStorage() {
     })
   }
 
+  const saveThemeMode = (newThemeMode: ThemeMode) => {
+    chrome.storage.local.set({ themeMode: newThemeMode }, () => {
+      setThemeMode(newThemeMode)
+    })
+  }
+
   return {
     items,
     results,
     autoCheckEnabled,
     checkInterval,
     notificationsEnabled,
+    lastAutoCheckAt,
+    nextAutoCheckAt,
     language,
+    themeMode,
     saveItems,
     saveResults,
     saveAutoCheckSettings,
     saveLanguage,
+    saveThemeMode,
     refreshData: loadFromStorage,
   }
 }
