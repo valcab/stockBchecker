@@ -166,7 +166,7 @@ export const translations = {
     onboardingButton: 'Afficher l’intro',
     onboardingSkip: 'Passer',
     onboardingNext: 'Suivant',
-    onboardingDone: 'Terminé',
+    onboardingDone: 'Terminer',
     onboardingTitle: 'Démarrage rapide',
     onboardingStep1Title: 'Suivre depuis la page produit',
     onboardingStep1Description: 'Ouvrez une page produit Thomann et utilisez le bouton flottant pour démarrer ou arrêter le suivi instantanément.',
