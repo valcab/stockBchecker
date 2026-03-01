@@ -44,9 +44,17 @@ chrome.runtime.onStartup.addListener(() => {
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === 'STOCKB_NOTIFY_AVAILABLE') {
-        sendBStockNotification(request.displayName, request.itemId, { force: request.force === true })
-            .then(result => sendResponse({ success: true, ...result }))
-            .catch(error => sendResponse({ success: false, error: error.message }));
+        (async () => {
+            try {
+                const result = await sendBStockNotification(request.displayName, request.itemId, {
+                    force: request.force === true,
+                });
+                sendResponse({ success: true, ...result });
+            } catch (error) {
+                console.error('Notification error:', error);
+                sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
+            }
+        })();
         return true;
     }
 
@@ -199,7 +207,7 @@ async function sendBStockNotification(displayName, itemId, options = {}) {
         return { sent: false, reason: 'cooldown' };
     }
 
-    await chrome.notifications.create({
+    await createBrowserNotification({
         type: 'basic',
         iconUrl: 'icons/icon-128.png',
         title: 'B-Stock Available!',
@@ -217,6 +225,15 @@ async function sendBStockNotification(displayName, itemId, options = {}) {
     }
 
     return { sent: true };
+}
+
+async function createBrowserNotification(options) {
+    try {
+        const notificationId = await chrome.notifications.create(options);
+        return notificationId;
+    } catch (error) {
+        throw new Error(error instanceof Error ? error.message : String(error));
+    }
 }
 
 // Listen for alarms

@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  PackageCheck,
   Trash2,
   RefreshCw,
   Plus,
@@ -592,7 +591,7 @@ function App() {
       {/* Header */}
       <div className="flex items-center justify-between p-4 pb-3 border-b">
         <div className="flex items-center gap-2">
-          <PackageCheck className="h-6 w-6 text-primary" />
+          <img src="icons/icon-128.png" alt="" className="h-7 w-7 rounded-xl" />
           <h1 className="text-xl font-bold">{t.title}</h1>
         </div>
         <Popover>
