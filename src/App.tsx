@@ -269,6 +269,7 @@ function App() {
     
     // Clear selection
     setSelectedItems(new Set())
+    clearFilters()
   }
 
   const handleToggleItem = (itemId: string) => {
@@ -282,12 +283,24 @@ function App() {
   }
 
   const handleToggleAll = () => {
-    if (selectedItems.size === items.length) {
-      setSelectedItems(new Set())
+    const filteredItemIds = filteredResults.map(([articleId]) => articleId)
+
+    if (filteredItemIds.length === 0) {
       return
     }
 
-    setSelectedItems(new Set(items.map(item => item.id)))
+    const areAllFilteredSelected = filteredItemIds.every((itemId) => selectedItems.has(itemId))
+
+    if (areAllFilteredSelected) {
+      const newSelected = new Set(selectedItems)
+      filteredItemIds.forEach((itemId) => newSelected.delete(itemId))
+      setSelectedItems(newSelected)
+      return
+    }
+
+    const newSelected = new Set(selectedItems)
+    filteredItemIds.forEach((itemId) => newSelected.add(itemId))
+    setSelectedItems(newSelected)
   }
 
   const handleCheckAll = async () => {
@@ -529,6 +542,9 @@ function App() {
     filterStatus !== 'all' ||
     filterBStock !== 'all'
   const hasActiveSort = filterSort !== 'default'
+  const filteredItemIds = filteredResults.map(([articleId]) => articleId)
+  const selectedFilteredCount = filteredItemIds.filter((itemId) => selectedItems.has(itemId)).length
+  const allFilteredSelected = filteredItemIds.length > 0 && selectedFilteredCount === filteredItemIds.length
 
   const renderEmptyState = ({
     icon,
@@ -595,7 +611,7 @@ function App() {
                 <p className="text-xs font-medium">{t.madeBy || 'Made by'}</p>
                 <div className="flex flex-col gap-1">
                   <a
-                    href="https://linkedin.com/in/your-profile"
+                    href="https://www.linkedin.com/in/valentincabioch/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-primary hover:underline"
@@ -695,23 +711,23 @@ function App() {
                       <div className="flex min-w-0 flex-1 items-center space-x-2">
                         <Checkbox
                           id="select-all-results"
-                          checked={selectedItems.size === allResults.length && allResults.length > 0}
+                          checked={allFilteredSelected}
                           onCheckedChange={handleToggleAll}
                         />
                         <Label htmlFor="select-all-results" className="flex min-w-0 cursor-pointer items-center gap-1.5 text-sm font-medium">
                           <span className="truncate">
-                          {selectedItems.size === allResults.length && allResults.length > 0 ? t.deselectAll || 'Deselect All' : t.selectAll || 'Select All'}
+                          {allFilteredSelected ? t.deselectAll || 'Deselect All' : t.selectAll || 'Select All'}
                           </span>
-                          {selectedItems.size > 0 && (
+                          {selectedFilteredCount > 0 && (
                             <span className="inline-flex items-center justify-center min-w-3 h-3 px-0.5 text-[8px] font-bold text-white bg-blue-600 rounded-full">
-                              {selectedItems.size}
+                              {selectedFilteredCount}
                             </span>
                           )}
                         </Label>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
                         <AnimatePresence>
-                          {selectedItems.size > 0 && (
+                          {selectedFilteredCount > 0 && (
                             <motion.div
                               initial={{ opacity: 0, x: 20, scale: 0.8 }}
                               animate={{ opacity: 1, x: 0, scale: 1 }}
@@ -740,7 +756,7 @@ function App() {
                           )}
                         </AnimatePresence>
 
-                        <Popover open={isFilterPopoverOpen} onOpenChange={setIsFilterPopoverOpen}>
+                        <Popover>
                           <TooltipProvider delayDuration={50}>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -789,7 +805,7 @@ function App() {
                           </PopoverContent>
                         </Popover>
 
-                        <Popover>
+                        <Popover open={isFilterPopoverOpen} onOpenChange={setIsFilterPopoverOpen}>
                           <TooltipProvider delayDuration={50}>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -1342,16 +1358,16 @@ function App() {
               </div>
 
               <div className="space-y-4">
-                <div className="rounded-2xl border bg-gradient-to-br from-blue-50 via-white to-sky-100 p-4">
+                <div className="rounded-2xl border bg-gradient-to-br from-blue-50 via-white to-sky-100 p-4 dark:border-slate-700 dark:bg-[linear-gradient(135deg,rgba(10,37,75,0.95)_0%,rgba(8,23,48,0.96)_52%,rgba(8,31,58,0.94)_100%)]">
                   <div className="mb-3 flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                       {onboardingStep === 0 ? <Plus className="h-5 w-5" /> : <RefreshCw className="h-5 w-5" />}
                     </div>
-                    <p className="text-sm font-semibold">
+                    <p className="text-sm font-semibold dark:text-slate-100">
                       {onboardingStep === 0 ? t.onboardingStep1Title : t.onboardingStep2Title}
                     </p>
                   </div>
-                  <p className="text-sm leading-6 text-slate-700">
+                  <p className="text-sm leading-6 text-slate-700 dark:text-slate-300">
                     {onboardingStep === 0 ? t.onboardingStep1Description : t.onboardingStep2Description}
                   </p>
                 </div>
