@@ -130,7 +130,7 @@ export function useStorage() {
 
     if (availableCount > 0) {
       chrome.action.setBadgeText({ text: availableCount.toString() })
-      chrome.action.setBadgeBackgroundColor({ color: '#9b87f5' })
+      chrome.action.setBadgeBackgroundColor({ color: '#28a745' })
     } else {
       chrome.action.setBadgeText({ text: '' })
     }

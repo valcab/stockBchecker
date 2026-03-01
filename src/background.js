@@ -2,6 +2,39 @@
 
 const AUTO_CHECK_ALARM = 'autoCheckAlarm';
 const NOTIFICATION_COOLDOWN_MS = 60 * 60 * 1000;
+const NOTIFICATION_I18N = {
+    en: {
+        title: 'B-Stock Available!',
+        message: (displayName) => `B-Stock is available for ${displayName || 'a tracked item'}`,
+    },
+    fr: {
+        title: 'Stock B disponible !',
+        message: (displayName) => `Le Stock B est disponible pour ${displayName || 'un article suivi'}`,
+    },
+    de: {
+        title: 'B-Stock verfugbar!',
+        message: (displayName) => `B-Stock ist verfugbar fur ${displayName || 'einen verfolgten Artikel'}`,
+    },
+    es: {
+        title: 'B-Stock disponible',
+        message: (displayName) => `B-Stock disponible para ${displayName || 'un articulo seguido'}`,
+    },
+    it: {
+        title: 'B-Stock disponibile',
+        message: (displayName) => `B-Stock disponibile per ${displayName || 'un articolo monitorato'}`,
+    },
+};
+
+function normalizeLanguage(input) {
+    const lang = String(input || '').toLowerCase();
+
+    if (lang.startsWith('fr')) return 'fr';
+    if (lang.startsWith('de')) return 'de';
+    if (lang.startsWith('es')) return 'es';
+    if (lang.startsWith('it')) return 'it';
+
+    return 'en';
+}
 
 chrome.runtime.onInstalled.addListener(() => {
     // Initialize storage
@@ -194,7 +227,8 @@ async function handleQuickRemoveItem(url) {
 
 async function sendBStockNotification(displayName, itemId, options = {}) {
     const force = options.force === true;
-    const data = await chrome.storage.local.get(['notificationsEnabled', 'lastNotificationSentAtByItem']);
+    const uiLanguage = normalizeLanguage(chrome.i18n?.getUILanguage?.() || 'en');
+    const data = await chrome.storage.local.get(['notificationsEnabled', 'lastNotificationSentAtByItem', 'language']);
     if (data.notificationsEnabled === false) {
         return { sent: false, reason: 'disabled' };
     }
@@ -202,6 +236,8 @@ async function sendBStockNotification(displayName, itemId, options = {}) {
     const lastNotificationSentAtByItem = data.lastNotificationSentAtByItem || {};
     const now = Date.now();
     const lastSentAt = itemId ? lastNotificationSentAtByItem[itemId] : null;
+    const language = normalizeLanguage(data.language || uiLanguage);
+    const copy = NOTIFICATION_I18N[language] || NOTIFICATION_I18N.en;
 
     if (!force && itemId && lastSentAt && now - lastSentAt < NOTIFICATION_COOLDOWN_MS) {
         return { sent: false, reason: 'cooldown' };
@@ -210,8 +246,8 @@ async function sendBStockNotification(displayName, itemId, options = {}) {
     await createBrowserNotification({
         type: 'basic',
         iconUrl: 'icons/icon-128.png',
-        title: 'B-Stock Available!',
-        message: `B-Stock is available for ${displayName || 'a tracked item'}`,
+        title: copy.title,
+        message: copy.message(displayName),
         priority: 2,
     });
 
