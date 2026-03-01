@@ -30,6 +30,24 @@
       error: 'Fehler',
       drag: 'Zum Verschieben ziehen',
     },
+    es: {
+      title: 'Seguir B-Stock',
+      added: 'Anadido',
+      stop: 'Dejar de seguir',
+      stopped: 'Seguimiento detenido',
+      working: 'Procesando...',
+      error: 'Error',
+      drag: 'Arrastra para mover',
+    },
+    it: {
+      title: 'Segui B-Stock',
+      added: 'Aggiunto',
+      stop: 'Interrompi monitoraggio',
+      stopped: 'Monitoraggio interrotto',
+      working: 'Elaborazione...',
+      error: 'Errore',
+      drag: 'Trascina per spostare',
+    },
   };
 
   const POSITION_KEY = 'floatingButtonPosition';
